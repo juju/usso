@@ -56,22 +56,14 @@ func GetToken(email, password string) (*ResponseBody, error) {
 
 type OAuth struct {
 	BaseURL     string
-	AuthURL     string
 	Token       string
 	TokenSecret string
 	Consumer    string
 }
 
-func (oauth *OAuth) consumer() string {
-	if oauth.Consumer == "" {
-		return "https://login.ubuntu.com"
-	}
-	return oauth.Consumer
-}
-
 func (oauth *OAuth) Sign(req *http.Request) error {
 	auth := `OAuth realm="https://login.ubuntu.com/", ` +
-		`oauth_consumer_key="` + url.QueryEscape(oauth.consumer()) + `", ` +
+		`oauth_consumer_key="` + url.QueryEscape(oauth.Consumer) + `", ` +
 		`oauth_token="` + url.QueryEscape(oauth.Token) + `", ` +
 		`oauth_signature_method="PLAINTEXT", ` +
 		`oauth_signature="` + url.QueryEscape(`&`+oauth.TokenSecret) + `", ` +
@@ -89,10 +81,27 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 	}
-	fmt.Printf("Response: %+v\n", *response_body)
+	oauth := OAuth{
+		"https://login.ubuntu.com/api/v2/accounts/vincenzo.di.somma%40canonical.com",
+		response_body.Key,
+		response_body.Secret,
+		"login.ubuntu.com",
+	}
 
-	// initialize a new OAuth struct with the values from response_body
-	// sign an http requets using oauth.Sign
+	request, err := http.NewRequest(
+		"POST",
+		"https://login.ubuntu.com/api/v2/accounts/vincenzo.di.somma%40canonical.com",
+		nil)
+
+	err = oauth.Sign(request)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+	}
 	// run the request
-
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+	}
+	fmt.Printf("response: %+v\n", response)
 }
