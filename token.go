@@ -81,6 +81,8 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 	}
+	fmt.Printf("Tokens: %+v\n", response_body)
+
 	oauth := OAuth{
 		"https://login.ubuntu.com/api/v2/accounts/vincenzo.di.somma%40canonical.com",
 		response_body.Key,
@@ -90,7 +92,7 @@ func main() {
 
 	request, err := http.NewRequest(
 		"POST",
-		"https://login.ubuntu.com/api/v2/accounts/vincenzo.di.somma%40canonical.com",
+		"https://login.ubuntu.com/api/v2/accounts/"+response_body.Key,
 		nil)
 
 	err = oauth.Sign(request)
