@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +13,10 @@ import (
 	"time"
 )
 
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
+
 type Credentials struct {
 	// Used to produce the request body
 	Email     string `json:"email"`
@@ -22,7 +27,7 @@ type Credentials struct {
 type SSOData struct {
 	// Used to catch the values in the response body
 	TokenSecret    string `json:"token_secret"`
-	TokenKey       string `json:token_key`
+	TokenKey       string `json:"token_key"`
 	TokenName      string `json:"token_name"`
 	ConsumerSecret string `json:"consumer_secret"`
 	ConsumerKey    string `json:"consumer_key"`
@@ -53,6 +58,7 @@ func GetToken(email, password string) (*SSOData, error) {
 		fmt.Println(err)
 		return nil, nil
 	}
+	fmt.Printf("Tokens: %+v\n", response_body)
 	return &response_body, nil
 }
 
@@ -67,14 +73,16 @@ type OAuth struct {
 
 func (oauth *OAuth) Sign(req *http.Request) error {
 	// Sign the provided request.
-	auth := `OAuth realm="https://api.launchpad.net/", ` +
+	auth := `OAuth realm="API", ` +
 		`oauth_consumer_key="` + url.QueryEscape(oauth.ConsumerKey) + `", ` +
 		`oauth_token="` + url.QueryEscape(oauth.TokenKey) + `", ` +
 		`oauth_signature_method="PLAINTEXT", ` +
-		`oauth_signature="` + url.QueryEscape(`&`+oauth.TokenSecret) + `", ` +
+		`oauth_signature="` + url.QueryEscape(
+		oauth.ConsumerSecret+`&`+oauth.TokenSecret) + `", ` +
 		`oauth_timestamp="` + strconv.FormatInt(time.Now().Unix(), 10) + `", ` +
-		`oauth_nonce="` + strconv.Itoa(int(rand.Int31())) + `", ` +
+		`oauth_nonce="` + strconv.Itoa(int(rand.Intn(99999999))) + `", ` +
 		`oauth_version="1.0"`
+	fmt.Println(auth)
 	req.Header.Add("Authorization", auth)
 	return nil
 }
@@ -82,7 +90,8 @@ func (oauth *OAuth) Sign(req *http.Request) error {
 func do_request(ssodata *SSOData) {
 	// FIXME remove it
 	oauth := OAuth{
-		"https://login.ubuntu.com/api/v2/accounts/" + ssodata.ConsumerKey,
+		"https://login.staging.ubuntu.com/api/v2/accounts/" +
+			ssodata.ConsumerKey,
 		ssodata.TokenKey,
 		ssodata.TokenSecret,
 		ssodata.ConsumerKey,
@@ -91,8 +100,8 @@ func do_request(ssodata *SSOData) {
 	}
 
 	request, err := http.NewRequest(
-		"POST",
-		"https://login.staging.ubuntu.com/api/v2/accounts/"+ssodata.TokenKey,
+		"GET",
+		"https://login.staging.ubuntu.com/api/v2/accounts/"+ssodata.ConsumerKey,
 		nil)
 
 	err = oauth.Sign(request)
@@ -106,6 +115,15 @@ func do_request(ssodata *SSOData) {
 		fmt.Printf("Error: %s\n", err)
 	}
 	fmt.Printf("response: %+v\n", response)
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	var b bytes.Buffer
+	b.Write(body)
+	fmt.Printf("response: %+v\n", b.String())
+
 	fmt.Printf("Status: %s", response.Status)
 	// resp_body, err := ioutil.ReadAll(response.Body)
 	// if err != nil {
@@ -121,7 +139,6 @@ func main() {
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 	}
-	fmt.Printf("Tokens: %+v\n", ssodata)
 	do_request(ssodata)
 
 }
