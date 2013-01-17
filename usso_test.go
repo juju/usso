@@ -62,6 +62,14 @@ func TestGetToken(test *testing.T) {
 
 func TestSignRequest(test *testing.T) {
 	// Test SignRequest
+
+	test_items := [...]string{
+		`OAuth realm="API"`,
+		`oauth_consumer_key="rfyzhdQ"`,
+		`oauth_token="abcs"`,
+		`oauth_signature="rwDkQkkdfdfdeAslkmmxAOjOAT%26mTBgLxtTRUdfqewqgrqsvx` +
+			`lijbMWkPBajgKcoZCrDwv"`}
+
 	creds := Credentials{
 		"foo@bar.com",
 		"foobarpwd",
@@ -79,20 +87,12 @@ func TestSignRequest(test *testing.T) {
 		`OAuth realm="API"`) {
 		test.Fail()
 	}
-	if !strings.Contains(
-		request.Header["Authorization"][0],
-		`oauth_consumer_key="rfyzhdQ"`) {
-		test.Fail()
-	}
-	if !strings.Contains(
-		request.Header["Authorization"][0],
-		`oauth_token="abcs"`) {
-		test.Fail()
-	}
-	if !strings.Contains(
-		request.Header["Authorization"][0],
-		`oauth_signature="rwDkQkkdfdfdeAslkmmxAOjOAT%26mTBgLxtTRUdfqewqgrqsvx`+
-			`lijbMWkPBajgKcoZCrDwv"`) {
-		test.Fail()
+
+	for _, c := range test_items {
+		if !strings.Contains(
+			request.Header["Authorization"][0],
+			c) {
+			test.Fail()
+		}
 	}
 }
