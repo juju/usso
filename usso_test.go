@@ -16,9 +16,9 @@ import (
 
 func Test(test *testing.T) { TestingT(test) }
 
-type TestSuite struct{}
+type USSOTestSuite struct{}
 
-var _ = Suite(&TestSuite{})
+var _ = Suite(&USSOTestSuite{})
 
 const (
 	tokenName      = "foo"
@@ -37,7 +37,7 @@ type SingleServingServer struct {
 
 // newSingleServingServer create a single-serving test http server which will
 // return only one response as defined by the passed arguments.
-func (suite *TestSuite) newSingleServingServer(uri string, response string, code int) *SingleServingServer {
+func (suite *USSOTestSuite) newSingleServingServer(uri string, response string, code int) *SingleServingServer {
 	var requestContent string
 	var requested bool
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +61,7 @@ func (suite *TestSuite) newSingleServingServer(uri string, response string, code
 	return &SingleServingServer{server, &requestContent}
 }
 
-func (suite *TestSuite) TestGetTokenReturnsTokens(c *C) {
+func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 	// Simulate a valid Ubuntu SSO Server response.
 	serverResponseData := map[string]string{
 		"date_updated":    "2013-01-16 14:03:36",
@@ -88,7 +88,7 @@ func (suite *TestSuite) TestGetTokenReturnsTokens(c *C) {
 	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
 }
 
-func (suite *TestSuite) TestSignRequestPlainText(c *C) {
+func (suite *USSOTestSuite) TestSignRequestPlainText(c *C) {
 	baseUrl := "https://localhost"
 	ssoData := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenName: tokenName, TokenSecret: tokenSecret}
 	request, _ := http.NewRequest("GET", baseUrl, nil)
