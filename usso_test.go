@@ -4,95 +4,100 @@
 package usso
 
 import (
-	"io"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"log"
+	. "launchpad.net/gocheck"
 	"net/http"
-	"strings"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
-func return_tokens(w http.ResponseWriter, request *http.Request) {
-	// Utility function to test GetToken
-	body, _ := ioutil.ReadAll(request.Body)
-	if string(body) != `{"email":"foo@bar.com","password":"foobarpwd",`+
-		`"token_name":"token_name"}` {
-		log.Fatalf("Wrong Credential sent to server.\n")
-	}
-	io.WriteString(
-		w,
-		`{
-		 "token_name": "foo", 
-		 "date_updated": "2013-01-16 14:03:36", 
-		 "token_key": "abcs", 
-		 "consumer_secret": "rwDkQkkdfdfdeAslkmmxAOjOAT", 
-		 "href": "/api/v2/tokens/abcd", 
-		 "date_created": "2013-01-16 14:03:36", 
-		 "consumer_key": "rfyzhdQ", 
-		 "token_secret": "mTBgLxtTRUdfqewqgrqsvxlijbMWkPBajgKcoZCrDwv"
-		 }`)
+func Test(test *testing.T) { TestingT(test) }
+
+type TestSuite struct{}
+
+var _ = Suite(&TestSuite{})
+
+const (
+	tokenName      = "foo"
+	tokenKey       = "abcs"
+	tokenSecret    = "mTBgLxtTRUdfqewqgrqsvxlijbMWkPBajgKcoZCrDwv"
+	consumerKey    = "rfyzhdQ"
+	consumerSecret = "rwDkQkkdfdfdeAslkmmxAOjOAT"
+	email          = "foo@bar.com"
+	password       = "foobarpwd"
+)
+
+type SingleServingServer struct {
+	*httptest.Server
+	requestContent *string
 }
 
-func TestGetToken(test *testing.T) {
-	// Test that GetToken connects to the right
-	http.HandleFunc("/", return_tokens)
-	go http.ListenAndServe(":8123", nil)
-	creds := Credentials{
-		"foo@bar.com",
-		"foobarpwd",
-		"token_name",
-		"http://localhost:8123"}
-	ssodata, _ := GetToken(&creds)
-	if ssodata.ConsumerKey != "rfyzhdQ" {
-		test.Fatalf("Wrong consumer key: %s", ssodata.ConsumerKey)
+// newSingleServingServer create a single-serving test http server which will
+// return only one response as defined by the passed arguments.
+func (suite *TestSuite) newSingleServingServer(uri string, response string, code int) *SingleServingServer {
+	var requestContent string
+	var requested bool
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		if requested {
+			http.Error(w, "Already requested", http.StatusServiceUnavailable)
+		}
+		res, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			panic(err)
+		}
+		requestContent = string(res)
+		if r.URL.String() != uri {
+			http.Error(w, "404 page not found", http.StatusNotFound)
+		} else {
+			w.WriteHeader(code)
+			fmt.Fprint(w, response)
+		}
+		requested = true
 	}
-	if ssodata.ConsumerSecret != "rwDkQkkdfdfdeAslkmmxAOjOAT" {
-		test.Fatalf("Wrong consumer secret: %s", ssodata.ConsumerSecret)
-	}
-	if ssodata.TokenKey != "abcs" {
-		test.Fatalf("Wrong token key: %s", ssodata.TokenKey)
-	}
-	if ssodata.TokenName != "foo" {
-		test.Fatalf("Wrong token name: %s", ssodata.TokenName)
-	}
-	if ssodata.TokenSecret != "mTBgLxtTRUdfqewqgrqsvxlijbMWkPBajgKcoZCrDwv" {
-		test.Fatalf("Wrong Token secret: %s", ssodata.TokenSecret)
-	}
+	server := httptest.NewServer(http.HandlerFunc(handler))
+	return &SingleServingServer{server, &requestContent}
 }
 
-func TestSignRequest(test *testing.T) {
-	// Test SignRequest
-	creds := Credentials{
-		"foo@bar.com",
-		"foobarpwd",
-		"token_name",
-		"http://localhost:8123"}
-	ssodata, _ := GetToken(&creds)
-	ssodata.BaseURL = "https://login.staging.ubuntu.com/api/v2/accounts/"
-	request, _ := http.NewRequest(
-		"GET",
-		"https://login.staging.ubuntu.com/api/v2/accounts/"+ssodata.ConsumerKey,
-		nil)
-	ssodata.Sign(request)
-	if !strings.Contains(
-		request.Header["Authorization"][0],
-		`OAuth realm="API"`) {
-		test.Fail()
+func (suite *TestSuite) TestGetTokenReturnsTokens(c *C) {
+	// Simulate a valid Ubuntu SSO Server reponse.
+	serverResponseData := map[string]string{
+		"date_updated":    "2013-01-16 14:03:36",
+		"date_created":    "2013-01-16 14:03:36",
+		"href":            "/api/v2/tokens/" + tokenKey,
+		"token_name":      tokenName,
+		"token_key":       tokenKey,
+		"token_secret":    tokenSecret,
+		"consumer_key":    consumerKey,
+		"consumer_secret": consumerSecret,
 	}
-	if !strings.Contains(
-		request.Header["Authorization"][0],
-		`oauth_consumer_key="rfyzhdQ"`) {
-		test.Fail()
-	}
-	if !strings.Contains(
-		request.Header["Authorization"][0],
-		`oauth_token="abcs"`) {
-		test.Fail()
-	}
-	if !strings.Contains(
-		request.Header["Authorization"][0],
-		`oauth_signature="rwDkQkkdfdfdeAslkmmxAOjOAT%26mTBgLxtTRUdfqewqgrqsvx`+
-			`lijbMWkPBajgKcoZCrDwv"`) {
-		test.Fail()
-	}
+	jsonServerResponseData, _ := json.Marshal(serverResponseData)
+	server := suite.newSingleServingServer("/", string(jsonServerResponseData), 200)
+	defer server.Close()
+
+	creds := Credentials{Email: email, Password: password, TokenName: tokenName, SSOServerURL: server.URL}
+	ssodata, err := GetToken(&creds)
+
+	c.Assert(err, IsNil)
+	expectedSSOData := &SSOData{ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenSecret: tokenSecret, TokenName: tokenName}
+	c.Assert(ssodata, DeepEquals, expectedSSOData)
+	expectedRequestContent, _ := json.Marshal(creds)
+	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
+}
+
+func (suite *TestSuite) TestSignRequestPlainText(c *C) {
+	baseUrl := "https://localhost"
+	ssoData := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenName: tokenName, TokenSecret: tokenSecret}
+	request, _ := http.NewRequest("GET", baseUrl, nil)
+
+	err := ssoData.Sign(request)
+
+	c.Assert(err, IsNil)
+	authHeader := request.Header["Authorization"][0]
+	c.Assert(authHeader, Matches, `.*OAuth realm="API".*`)
+	c.Assert(authHeader, Matches, `.*oauth_consumer_key="`+url.QueryEscape(ssoData.ConsumerKey)+`".*`)
+	c.Assert(authHeader, Matches, `.*oauth_token="`+url.QueryEscape(ssoData.TokenKey)+`".*`)
+	c.Assert(authHeader, Matches, `.*oauth_signature="`+url.QueryEscape(ssoData.ConsumerSecret+`&`+ssoData.TokenSecret)+`.*`)
 }
