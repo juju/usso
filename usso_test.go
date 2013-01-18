@@ -62,7 +62,7 @@ func (suite *TestSuite) newSingleServingServer(uri string, response string, code
 }
 
 func (suite *TestSuite) TestGetTokenReturnsTokens(c *C) {
-	// Simulate a valid Ubuntu SSO Server reponse.
+	// Simulate a valid Ubuntu SSO Server response.
 	serverResponseData := map[string]string{
 		"date_updated":    "2013-01-16 14:03:36",
 		"date_created":    "2013-01-16 14:03:36",
@@ -77,12 +77,13 @@ func (suite *TestSuite) TestGetTokenReturnsTokens(c *C) {
 	server := suite.newSingleServingServer("/", string(jsonServerResponseData), 200)
 	defer server.Close()
 
+	// The returned information are correct.
 	creds := Credentials{Email: email, Password: password, TokenName: tokenName, SSOServerURL: server.URL}
 	ssodata, err := GetToken(&creds)
-
 	c.Assert(err, IsNil)
 	expectedSSOData := &SSOData{ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenSecret: tokenSecret, TokenName: tokenName}
 	c.Assert(ssodata, DeepEquals, expectedSSOData)
+	// The request that the fake Ubuntu SSO Server got contained the credentials.
 	expectedRequestContent, _ := json.Marshal(creds)
 	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
 }
