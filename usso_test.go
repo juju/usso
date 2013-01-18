@@ -77,7 +77,7 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 	server := suite.newSingleServingServer("/", string(jsonServerResponseData), 200)
 	defer server.Close()
 
-	// The returned information are correct.
+	// The returned information is correct.
 	creds := Credentials{Email: email, Password: password, TokenName: tokenName, SSOServerURL: server.URL}
 	ssodata, err := GetToken(&creds)
 	c.Assert(err, IsNil)
