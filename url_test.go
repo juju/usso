@@ -43,7 +43,7 @@ func (suite *USSOTestSuite) TestNormalizeURLStripsStandardHTTPSPort(c *gocheck.C
 func (suite *USSOTestSuite) TestNormalizeURLLeavesNonstandardPort(c *gocheck.C) {
 	output, err := NormalizeURL("http://example.com:8080/")
 	c.Assert(nil, gocheck.Equals, err)
-	c.Assert(output, gocheck.Equals, "http://example.com/path")
+	c.Assert(output, gocheck.Equals, "http://example.com:8080/")
 }
 
 
