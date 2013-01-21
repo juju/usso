@@ -4,7 +4,10 @@
 package usso
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -18,6 +21,16 @@ import (
 func init() {
 	// Initialize the random generator.
 	rand.Seed(time.Now().UTC().UnixNano())
+}
+
+func timestamp() string {
+	// Create a timestamp used in authorization header.
+	return strconv.Itoa(int(time.Now().Unix()))
+}
+
+func nonce() string {
+	// Create a nonce used in authorization header.
+	return strconv.Itoa(rand.Intn(100000000))
 }
 
 type Credentials struct {
@@ -66,17 +79,69 @@ func GetToken(credentials *Credentials) (*SSOData, error) {
 	return &ssodata, nil
 }
 
+func (oauth *SSOData) GetAuthorizationHeader() (string, error) {
+	// Sign the provided request.
+	nonce := nonce()
+	timestamp := timestamp()
+	auth := fmt.Sprintf(
+		`OAuth realm="API", `+
+			`oauth_consumer_key="%s", `+
+			`oauth_token="%s", `+
+			`oauth_signature_method="PLAINTEXT", `+
+			`oauth_signature="%s%%26%s", `+
+			`oauth_timestamp="%s", `+
+			`oauth_nonce="%s", `+
+			`oauth_version="1.0"`,
+		url.QueryEscape(oauth.ConsumerKey),
+		url.QueryEscape(oauth.TokenKey),
+		url.QueryEscape(oauth.ConsumerSecret),
+		url.QueryEscape(oauth.TokenSecret),
+		url.QueryEscape(timestamp),
+		url.QueryEscape(nonce))
+	return auth, nil
+}
+
 func (oauth *SSOData) Sign(req *http.Request) error {
 	// Sign the provided request.
-	auth := `OAuth realm="API", ` +
-		`oauth_consumer_key="` + url.QueryEscape(oauth.ConsumerKey) + `", ` +
-		`oauth_token="` + url.QueryEscape(oauth.TokenKey) + `", ` +
-		`oauth_signature_method="PLAINTEXT", ` +
-		`oauth_signature="` + url.QueryEscape(
-		oauth.ConsumerSecret+`&`+oauth.TokenSecret) + `", ` +
-		`oauth_timestamp="` + strconv.FormatInt(time.Now().Unix(), 10) + `", ` +
-		`oauth_nonce="` + strconv.Itoa(int(rand.Intn(99999999))) + `", ` +
-		`oauth_version="1.0"`
+	auth, err := oauth.GetAuthorizationHeader()
+	if err != nil {
+		log.Println(err)
+	}
 	req.Header.Add("Authorization", auth)
 	return nil
+}
+
+func (oauth *SSOData) signature(
+	http_method, params, signature_method, nonce, timestamp string) (
+	string, error) {
+	// Depending on the signature method, create the signature from the 
+	// consumer secret, the token secret and, if required, the URL.
+	// Supported signature methods are PLAINTEXT and HMAC-SHA1.
+
+	switch signature_method {
+	case "PLAINTEXT":
+		return fmt.Sprintf(
+			`oauth_signature="%s%%26%s"`,
+			oauth.ConsumerSecret,
+			oauth.TokenSecret), nil
+	case "HMAC-SHA1":
+		base_string := fmt.Sprint(`%s&%s%s`,
+			http_method,
+			url.QueryEscape(oauth.BaseURL),
+			url.QueryEscape(params),
+			url.QueryEscape("&oauth_consumer_key="+oauth.ConsumerKey),
+			url.QueryEscape("&oauth_nonce="+nonce),
+			url.QueryEscape("&oauth_signature_method="+signature_method),
+			url.QueryEscape("&oauth_timestamp="+timestamp),
+			url.QueryEscape("&oauth_token="+oauth.TokenSecret),
+			"&oauth_version=1.0",
+			"&size=original")
+		hasher := sha1.New()
+		hasher.Write([]byte(base_string))
+		sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+		return sha, nil
+	default:
+		return "", nil //FIXME return an appropriate error
+	}
+	return "", nil
 }
