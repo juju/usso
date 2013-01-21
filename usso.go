@@ -20,11 +20,6 @@ func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
-type SSOServer interface {
-	tokenURL() string
-	GetToken(email string, password string, tokenName string) (*SSOData, error)
-}
-
 type UbuntuSSOServer struct {
 	baseUrl string
 }
@@ -32,9 +27,6 @@ type UbuntuSSOServer struct {
 func (server UbuntuSSOServer) tokenURL() string {
 	return server.baseUrl + "/api/v2/tokens"
 }
-
-// Trick to ensure *UbuntuSSOServer implements the SSOServer interface.
-var _ SSOServer = (*UbuntuSSOServer)(nil)
 
 // ProductionUbuntuSSOServer represents the production Ubuntu SSO server
 // located at https://login.ubuntu.com.
