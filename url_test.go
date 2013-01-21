@@ -5,20 +5,6 @@ import (
 )
 
 
-func (suite *USSOTestSuite) TestNormalizeMethodExtractsHTTP(c *gocheck.C) {
-	output, err := NormalizeMethod("http://example.com/path?query=params")
-	c.Assert(nil, gocheck.Equals, err)
-	c.Assert(output, gocheck.Equals, "HTTP")
-}
-
-
-func (suite *USSOTestSuite) TestNormalizeMethodExtractsHTTPS(c *gocheck.C) {
-	output, err := NormalizeMethod("https://example.com/path?query=params")
-	c.Assert(nil, gocheck.Equals, err)
-	c.Assert(output, gocheck.Equals, "HTTPS")
-}
-
-
 func (suite *USSOTestSuite) TestNormalizeURLReturnsBasicURL(c *gocheck.C) {
 	output, err := NormalizeURL("http://example.com/path")
 	c.Assert(nil, gocheck.Equals, err)

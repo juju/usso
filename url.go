@@ -7,15 +7,6 @@ import (
 )
 
 
-func NormalizeMethod(input_url string) (string, error) {
-	parsed_url, err := url.Parse(input_url)
-	if err != nil {
-		return "", err
-	}
-	return strings.ToUpper(parsed_url.Scheme), nil
-}
-
-
 func normalizeHost(scheme, host_spec string) string {
 	standard_ports := map[string]string{
 		"http": "80",
