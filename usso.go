@@ -81,23 +81,33 @@ func GetToken(credentials *Credentials) (*SSOData, error) {
 
 func (oauth *SSOData) GetAuthorizationHeader() string {
 	// Sign the provided request.
+
+	//FIXME remove
+	http_method := "POST"
+	params := ""
+	signature_method := "PLAINTEXT"
+	//FIXME remove
+
 	nonce := nonce()
 	timestamp := timestamp()
+	signature := oauth.signature(
+		http_method, params, signature_method, nonce, timestamp)
+
 	auth := fmt.Sprintf(
 		`OAuth realm="API", `+
 			`oauth_consumer_key="%s", `+
 			`oauth_token="%s", `+
 			`oauth_signature_method="PLAINTEXT", `+
-			`oauth_signature="%s%%26%s", `+
+			`oauth_signature="%s", `+
 			`oauth_timestamp="%s", `+
 			`oauth_nonce="%s", `+
 			`oauth_version="1.0"`,
 		url.QueryEscape(oauth.ConsumerKey),
 		url.QueryEscape(oauth.TokenKey),
-		url.QueryEscape(oauth.ConsumerSecret),
-		url.QueryEscape(oauth.TokenSecret),
+		signature,
 		url.QueryEscape(timestamp),
 		url.QueryEscape(nonce))
+
 	return auth
 }
 
@@ -109,8 +119,7 @@ func (oauth *SSOData) Sign(req *http.Request) error {
 }
 
 func (oauth *SSOData) signature(
-	http_method, params, signature_method, nonce, timestamp string) (
-	string, error) {
+	http_method, params, signature_method, nonce, timestamp string) string {
 	// Depending on the signature method, create the signature from the 
 	// consumer secret, the token secret and, if required, the URL.
 	// Supported signature methods are PLAINTEXT and HMAC-SHA1.
@@ -120,7 +129,7 @@ func (oauth *SSOData) signature(
 		return fmt.Sprintf(
 			`oauth_signature="%s%%26%s"`,
 			oauth.ConsumerSecret,
-			oauth.TokenSecret), nil
+			oauth.TokenSecret)
 	case "HMAC-SHA1":
 		base_string := fmt.Sprint(`%s&%s%s`,
 			http_method,
@@ -136,9 +145,7 @@ func (oauth *SSOData) signature(
 		hasher := sha1.New()
 		hasher.Write([]byte(base_string))
 		sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
-		return sha, nil
-	default:
-		return "", nil //FIXME return an appropriate error
+		return sha
 	}
-	return "", nil
+	return ""
 }
