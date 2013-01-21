@@ -22,18 +22,20 @@ func inputParams() {
 
 func main() {
 	inputParams()
+
+        // Fetch the tokens using usso.GetToken.
 	fmt.Println("Fetching tokens from staging server...")
 	server := usso.StagingUbuntuSSOServer
 	// One would use server := usso.ProductionUbuntuSSOServer to use the production Ubuntu SSO Server.
-	data, err := usso.GetToken(email, password, tokenName, server)
+	token, err := usso.GetToken(email, password, tokenName, server)
 	if err != nil {
 		panic(err)
 	}
-	// Format the token as json for displaying it.:
-	json_data, err := json.Marshal(data)
+	// Format the result as json for displaying it.:
+	json_token, err := json.Marshal(token)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Got tokens: %s\n", json_data)
+	fmt.Printf("Got tokens: %s\n", json_token)
 
 }

@@ -38,15 +38,11 @@ type SingleServingServer struct {
 func (suite *USSOTestSuite) TestProductionUbuntuSSOServerURLs(c *C) {
 	tokenURL := ProductionUbuntuSSOServer.tokenURL()
 	c.Assert(tokenURL, Equals, "https://login.ubuntu.com/api/v2/tokens")
-	accountURL := ProductionUbuntuSSOServer.accountURL("openididentifier")
-	c.Assert(accountURL, Equals, "https://login.ubuntu.com/api/v2/accounts/openididentifier")
 }
 
 func (suite *USSOTestSuite) TestStagingUbuntuSSOServerURLs(c *C) {
 	tokenURL := StagingUbuntuSSOServer.tokenURL()
 	c.Assert(tokenURL, Equals, "https://login.staging.ubuntu.com/api/v2/tokens")
-	accountURL := StagingUbuntuSSOServer.accountURL("openididentifier")
-	c.Assert(accountURL, Equals, "https://login.staging.ubuntu.com/api/v2/accounts/openididentifier")
 }
 
 // newSingleServingServer create a single-serving test http server which will
@@ -89,11 +85,11 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 	}
 	jsonServerResponseData, _ := json.Marshal(serverResponseData)
 	server := newSingleServingServer("/api/v2/tokens", string(jsonServerResponseData), 200)
-	var ssoServer = ubuntuSSOServer{server.URL}
+	var testSSOServer = &UbuntuSSOServer{server.URL}
 	defer server.Close()
 
 	// The returned information is correct.
-	ssodata, err := GetToken(email, password, tokenName, &ssoServer)
+	ssodata, err := GetToken(email, password, tokenName, testSSOServer)
 	c.Assert(err, IsNil)
 	expectedSSOData := &SSOData{ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenSecret: tokenSecret, TokenName: tokenName}
 	c.Assert(ssodata, DeepEquals, expectedSSOData)

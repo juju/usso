@@ -5,7 +5,6 @@ package usso
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -23,29 +22,26 @@ func init() {
 
 type SSOServer interface {
 	tokenURL() string
-	accountURL(openIDIdentifier string) string
 }
 
-type ubuntuSSOServer struct {
+type UbuntuSSOServer struct {
 	baseUrl string
 }
 
-func (server ubuntuSSOServer) tokenURL() string {
+func (server UbuntuSSOServer) tokenURL() string {
 	return server.baseUrl + "/api/v2/tokens"
 }
 
-func (server ubuntuSSOServer) accountURL(openIDIdentifier string) string {
-	return server.baseUrl + "/api/v2/accounts/" + openIDIdentifier
-}
+// Trick to ensure *UbuntuSSOServer implements the SSOServer interface.
+var _ SSOServer = (*UbuntuSSOServer)(nil)
 
-// Trick to ensure *ubuntuSSOServer implements the SSOServer interface.
-var _ SSOServer = (*ubuntuSSOServer)(nil)
+// ProductionUbuntuSSOServer represents the production Ubuntu SSO server
+// located at https://login.ubuntu.com.
+var ProductionUbuntuSSOServer = UbuntuSSOServer{"https://login.ubuntu.com"}
 
-// The production Ubuntu SSO server located at https://login.ubuntu.com.
-var ProductionUbuntuSSOServer = ubuntuSSOServer{"https://login.ubuntu.com"}
-
-// The staging Ubuntu SSO server located at https://login.ubuntu.com. Use it for testing.
-var StagingUbuntuSSOServer = ubuntuSSOServer{"https://login.staging.ubuntu.com"}
+// StagingUbuntuSSOServer represents the staging Ubuntu SSO server located
+// at https://login.staging.ubuntu.com. Use it for testing.
+var StagingUbuntuSSOServer = UbuntuSSOServer{"https://login.staging.ubuntu.com"}
 
 type SSOData struct {
 	// Contains the 
@@ -77,7 +73,6 @@ func GetToken(email string, password string, tokenName string, server SSOServer)
 	}
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		fmt.Println("Errrorororor")
 		log.Println(err)
 		return nil, err
 	}
