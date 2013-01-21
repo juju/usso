@@ -31,7 +31,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// Format the result as json for displaying it.:
+	// Format the result as json for displaying it:
 	json_token, err := json.Marshal(token)
 	if err != nil {
 		panic(err)
