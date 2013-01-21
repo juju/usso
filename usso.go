@@ -5,6 +5,7 @@ package usso
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -20,13 +21,31 @@ func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
-type Credentials struct {
-	// Contains the user credentials used to get access token.
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	TokenName    string `json:"token_name"`
-	SSOServerURL string `json:"-"`
+type SSOServer interface {
+	tokenURL() string
+	accountURL(openIDIdentifier string) string
 }
+
+type ubuntuSSOServer struct {
+	baseUrl string
+}
+
+func (server ubuntuSSOServer) tokenURL() string {
+	return server.baseUrl + "/api/v2/tokens"
+}
+
+func (server ubuntuSSOServer) accountURL(openIDIdentifier string) string {
+	return server.baseUrl + "/api/v2/accounts/" + openIDIdentifier
+}
+
+// Trick to ensure *ubuntuSSOServer implements the SSOServer interface.
+var _ SSOServer = (*ubuntuSSOServer)(nil)
+
+// The production Ubuntu SSO server located at https://login.ubuntu.com.
+var ProductionUbuntuSSOServer = ubuntuSSOServer{"https://login.ubuntu.com"}
+
+// The staging Ubuntu SSO server located at https://login.ubuntu.com. Use it for testing.
+var StagingUbuntuSSOServer = ubuntuSSOServer{"https://login.staging.ubuntu.com"}
 
 type SSOData struct {
 	// Contains the 
@@ -38,15 +57,19 @@ type SSOData struct {
 	TokenSecret    string `json:"token_secret"`
 }
 
-func GetToken(credentials *Credentials) (*SSOData, error) {
-	// Get a valid access token from credentials.
+func GetToken(email string, password string, tokenName string, server SSOServer) (*SSOData, error) {
+	credentials := map[string]string{
+		"email":      email,
+		"password":   password,
+		"token_name": tokenName,
+	}
 	json_credentials, err := json.Marshal(credentials)
 	if err != nil {
 		log.Printf("Error: %s\n", err)
 		return nil, err
 	}
 	response, err := http.Post(
-		credentials.SSOServerURL,
+		server.tokenURL(),
 		"application/json",
 		strings.NewReader(string(json_credentials)))
 	if err != nil {
@@ -54,6 +77,7 @@ func GetToken(credentials *Credentials) (*SSOData, error) {
 	}
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
+		fmt.Println("Errrorororor")
 		log.Println(err)
 		return nil, err
 	}

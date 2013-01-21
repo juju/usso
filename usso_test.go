@@ -35,9 +35,23 @@ type SingleServingServer struct {
 	requestContent *string
 }
 
+func (suite *USSOTestSuite) TestProductionUbuntuSSOServerURLs(c *C) {
+	tokenURL := ProductionUbuntuSSOServer.tokenURL()
+	c.Assert(tokenURL, Equals, "https://login.ubuntu.com/api/v2/tokens")
+	accountURL := ProductionUbuntuSSOServer.accountURL("openididentifier")
+	c.Assert(accountURL, Equals, "https://login.ubuntu.com/api/v2/accounts/openididentifier")
+}
+
+func (suite *USSOTestSuite) TestStagingUbuntuSSOServerURLs(c *C) {
+	tokenURL := StagingUbuntuSSOServer.tokenURL()
+	c.Assert(tokenURL, Equals, "https://login.staging.ubuntu.com/api/v2/tokens")
+	accountURL := StagingUbuntuSSOServer.accountURL("openididentifier")
+	c.Assert(accountURL, Equals, "https://login.staging.ubuntu.com/api/v2/accounts/openididentifier")
+}
+
 // newSingleServingServer create a single-serving test http server which will
 // return only one response as defined by the passed arguments.
-func (suite *USSOTestSuite) newSingleServingServer(uri string, response string, code int) *SingleServingServer {
+func newSingleServingServer(uri string, response string, code int) *SingleServingServer {
 	var requestContent string
 	var requested bool
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -74,17 +88,22 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 		"consumer_secret": consumerSecret,
 	}
 	jsonServerResponseData, _ := json.Marshal(serverResponseData)
-	server := suite.newSingleServingServer("/", string(jsonServerResponseData), 200)
+	server := newSingleServingServer("/api/v2/tokens", string(jsonServerResponseData), 200)
+	var ssoServer = ubuntuSSOServer{server.URL}
 	defer server.Close()
 
 	// The returned information is correct.
-	creds := Credentials{Email: email, Password: password, TokenName: tokenName, SSOServerURL: server.URL}
-	ssodata, err := GetToken(&creds)
+	ssodata, err := GetToken(email, password, tokenName, &ssoServer)
 	c.Assert(err, IsNil)
 	expectedSSOData := &SSOData{ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenSecret: tokenSecret, TokenName: tokenName}
 	c.Assert(ssodata, DeepEquals, expectedSSOData)
 	// The request that the fake Ubuntu SSO Server got contained the credentials.
-	expectedRequestContent, _ := json.Marshal(creds)
+	credentials := map[string]string{
+		"email":      email,
+		"password":   password,
+		"token_name": tokenName,
+	}
+	expectedRequestContent, _ := json.Marshal(credentials)
 	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
 }
 
