@@ -58,5 +58,10 @@ func (suite *USSOTestSuite) TestNormalizeParametersEscapesParameters(c *gocheck.
 
 
 func (suite *USSOTestSuite) TestNormalizeParametersOmitsOAuthSignature(c *gocheck.C) {
-	c.Assert(nil, gocheck.Equals, "TEST THIS")
+	params := map[string]string{
+		"a": "1",
+		"oauth_signature": "foobarsplatszot",
+		"z": "26",
+	}
+	c.Assert(NormalizeParameters(params), gocheck.Equals, "a=1&z=26")
 }
