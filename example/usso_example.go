@@ -23,7 +23,7 @@ func inputParams() {
 func main() {
 	inputParams()
 
-        // Fetch the tokens using usso.GetToken.
+	// Fetch the tokens using usso.GetToken.
 	fmt.Println("Fetching tokens from staging server...")
 	server := usso.StagingUbuntuSSOServer
 	// One would use server := usso.ProductionUbuntuSSOServer to use the production Ubuntu SSO Server.
