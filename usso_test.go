@@ -83,7 +83,10 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 		"consumer_key":    consumerKey,
 		"consumer_secret": consumerSecret,
 	}
-	jsonServerResponseData, _ := json.Marshal(serverResponseData)
+	jsonServerResponseData, err := json.Marshal(serverResponseData)
+	if err != nil {
+		panic(err)
+	}
 	server := newSingleServingServer("/api/v2/tokens", string(jsonServerResponseData), 200)
 	var testSSOServer = &UbuntuSSOServer{server.URL}
 	defer server.Close()
@@ -99,7 +102,10 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 		"password":   password,
 		"token_name": tokenName,
 	}
-	expectedRequestContent, _ := json.Marshal(credentials)
+	expectedRequestContent, err := json.Marshal(credentials)
+	if err != nil {
+		panic(err)
+	}
 	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
 }
 
