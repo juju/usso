@@ -79,7 +79,7 @@ func GetToken(credentials *Credentials) (*SSOData, error) {
 	return &ssodata, nil
 }
 
-func (oauth *SSOData) GetAuthorizationHeader() (string, error) {
+func (oauth *SSOData) GetAuthorizationHeader() string {
 	// Sign the provided request.
 	nonce := nonce()
 	timestamp := timestamp()
@@ -98,15 +98,12 @@ func (oauth *SSOData) GetAuthorizationHeader() (string, error) {
 		url.QueryEscape(oauth.TokenSecret),
 		url.QueryEscape(timestamp),
 		url.QueryEscape(nonce))
-	return auth, nil
+	return auth
 }
 
 func (oauth *SSOData) Sign(req *http.Request) error {
 	// Sign the provided request.
-	auth, err := oauth.GetAuthorizationHeader()
-	if err != nil {
-		log.Println(err)
-	}
+	auth := oauth.GetAuthorizationHeader()
 	req.Header.Add("Authorization", auth)
 	return nil
 }
