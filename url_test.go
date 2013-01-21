@@ -53,7 +53,7 @@ func (suite *USSOTestSuite) TestNormalizeParametersSortsParameters(c *gocheck.C)
 
 
 func (suite *USSOTestSuite) TestNormalizeParametersEscapesParameters(c *gocheck.C) {
-	c.Assert(nil, gocheck.Equals, "TEST THIS")
+	c.Assert(NormalizeParameters(map[string]string{"a&b": "1"}), gocheck.Equals, "a%26b=1")
 }
 
 
