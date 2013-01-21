@@ -97,7 +97,8 @@ func (suite *USSOTestSuite) TestSignRequestPlainText(c *C) {
 
 	c.Assert(err, IsNil)
 	authHeader := request.Header["Authorization"][0]
-	c.Assert(authHeader, Matches, `.*OAuth realm="API".*`)
+	c.Assert(authHeader, Matches, `^OAuth.*`)
+	c.Assert(authHeader, Matches, `.*realm="API".*`)
 	c.Assert(authHeader, Matches, `.*oauth_consumer_key="`+url.QueryEscape(ssoData.ConsumerKey)+`".*`)
 	c.Assert(authHeader, Matches, `.*oauth_token="`+url.QueryEscape(ssoData.TokenKey)+`".*`)
 	c.Assert(authHeader, Matches, `.*oauth_signature="`+url.QueryEscape(ssoData.ConsumerSecret+`&`+ssoData.TokenSecret)+`.*`)

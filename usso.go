@@ -5,6 +5,7 @@ package usso
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -66,17 +67,33 @@ func GetToken(credentials *Credentials) (*SSOData, error) {
 	return &ssodata, nil
 }
 
+func generateNonce() string {
+	return strconv.Itoa(rand.Intn(100000000))
+}
+
+func generateTimestamp() string {
+	return strconv.Itoa(int(time.Now().Unix()))
+}
+
 func (oauth *SSOData) Sign(req *http.Request) error {
-	// Sign the provided request.
-	auth := `OAuth realm="API", ` +
-		`oauth_consumer_key="` + url.QueryEscape(oauth.ConsumerKey) + `", ` +
-		`oauth_token="` + url.QueryEscape(oauth.TokenKey) + `", ` +
-		`oauth_signature_method="PLAINTEXT", ` +
-		`oauth_signature="` + url.QueryEscape(
-		oauth.ConsumerSecret+`&`+oauth.TokenSecret) + `", ` +
-		`oauth_timestamp="` + strconv.FormatInt(time.Now().Unix(), 10) + `", ` +
-		`oauth_nonce="` + strconv.Itoa(int(rand.Intn(99999999))) + `", ` +
-		`oauth_version="1.0"`
-	req.Header.Add("Authorization", auth)
+	// Sign the provided request using the OAuth PLAINTEXT method:
+	// http://oauth.net/core/1.0/#anchor22.
+	signature := oauth.ConsumerSecret + `&` + oauth.TokenSecret
+	authData := map[string]string{
+		"realm":                  "API",
+		"oauth_consumer_key":     oauth.ConsumerKey,
+		"oauth_token":            oauth.TokenKey,
+		"oauth_signature_method": "PLAINTEXT",
+		"oauth_signature":        signature,
+		"oauth_timestamp":        generateTimestamp(),
+		"oauth_nonce":            generateNonce(),
+		"oauth_version":          "1.0",
+	}
+	// Build OAuth header.
+	authHeader := []string{"OAuth"}
+	for key, value := range authData {
+		authHeader = append(authHeader, fmt.Sprintf(` %s="%s"`, key, url.QueryEscape(value)))
+	}
+	req.Header.Add("Authorization", strings.Join(authHeader, ""))
 	return nil
 }
