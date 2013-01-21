@@ -92,7 +92,7 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 	defer server.Close()
 
 	// The returned information is correct.
-	ssodata, err := GetToken(email, password, tokenName, testSSOServer)
+	ssodata, err := testSSOServer.GetToken(email, password, tokenName)
 	c.Assert(err, IsNil)
 	expectedSSOData := &SSOData{ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenSecret: tokenSecret, TokenName: tokenName}
 	c.Assert(ssodata, DeepEquals, expectedSSOData)

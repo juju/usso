@@ -27,7 +27,7 @@ func main() {
 	fmt.Println("Fetching tokens from staging server...")
 	server := usso.StagingUbuntuSSOServer
 	// One would use server := usso.ProductionUbuntuSSOServer to use the production Ubuntu SSO Server.
-	token, err := usso.GetToken(email, password, tokenName, server)
+	token, err := server.GetToken(email, password, tokenName)
 	if err != nil {
 		panic(err)
 	}

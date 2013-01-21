@@ -22,6 +22,7 @@ func init() {
 
 type SSOServer interface {
 	tokenURL() string
+	GetToken(email string, password string, tokenName string) (*SSOData, error)
 }
 
 type UbuntuSSOServer struct {
@@ -53,7 +54,7 @@ type SSOData struct {
 	TokenSecret    string `json:"token_secret"`
 }
 
-func GetToken(email string, password string, tokenName string, server SSOServer) (*SSOData, error) {
+func (server UbuntuSSOServer) GetToken(email string, password string, tokenName string) (*SSOData, error) {
 	credentials := map[string]string{
 		"email":      email,
 		"password":   password,
