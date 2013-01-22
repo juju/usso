@@ -42,13 +42,16 @@ type Credentials struct {
 }
 
 type SSOData struct {
-	// Contains the 
-	BaseURL        string
-	ConsumerKey    string `json:"consumer_key"`
-	ConsumerSecret string `json:"consumer_secret"`
-	TokenKey       string `json:"token_key"`
-	TokenName      string `json:"token_name"`
-	TokenSecret    string `json:"token_secret"`
+	// Contains the oauth data to perform a request.
+	HTTPMethod      string `json:"-"`
+	BaseURL         string `json:"-"`
+	Params          string `json:"-"`
+	SignatureMethod string `json:"-"`
+	ConsumerKey     string `json:"consumer_key"`
+	ConsumerSecret  string `json:"consumer_secret"`
+	TokenKey        string `json:"token_key"`
+	TokenName       string `json:"token_name"`
+	TokenSecret     string `json:"token_secret"`
 }
 
 func GetToken(credentials *Credentials) (*SSOData, error) {
@@ -81,29 +84,22 @@ func GetToken(credentials *Credentials) (*SSOData, error) {
 
 func (oauth *SSOData) GetAuthorizationHeader() string {
 	// Sign the provided request.
-
-	//FIXME remove
-	http_method := "POST"
-	params := ""
-	signature_method := "PLAINTEXT"
-	//FIXME remove
-
 	nonce := nonce()
 	timestamp := timestamp()
-	signature := oauth.signature(
-		http_method, params, signature_method, nonce, timestamp)
+	signature := oauth.signature(nonce, timestamp)
 
 	auth := fmt.Sprintf(
 		`OAuth realm="API", `+
 			`oauth_consumer_key="%s", `+
 			`oauth_token="%s", `+
-			`oauth_signature_method="PLAINTEXT", `+
+			`oauth_signature_method="%s", `+
 			`oauth_signature="%s", `+
 			`oauth_timestamp="%s", `+
 			`oauth_nonce="%s", `+
 			`oauth_version="1.0"`,
 		url.QueryEscape(oauth.ConsumerKey),
 		url.QueryEscape(oauth.TokenKey),
+		oauth.SignatureMethod,
 		signature,
 		url.QueryEscape(timestamp),
 		url.QueryEscape(nonce))
@@ -118,13 +114,12 @@ func (oauth *SSOData) Sign(req *http.Request) error {
 	return nil
 }
 
-func (oauth *SSOData) signature(
-	http_method, params, signature_method, nonce, timestamp string) string {
+func (oauth *SSOData) signature(nonce, timestamp string) string {
 	// Depending on the signature method, create the signature from the 
 	// consumer secret, the token secret and, if required, the URL.
 	// Supported signature methods are PLAINTEXT and HMAC-SHA1.
 
-	switch signature_method {
+	switch oauth.SignatureMethod {
 	case "PLAINTEXT":
 		return fmt.Sprintf(
 			`oauth_signature="%s%%26%s"`,
@@ -132,12 +127,12 @@ func (oauth *SSOData) signature(
 			oauth.TokenSecret)
 	case "HMAC-SHA1":
 		base_string := fmt.Sprint(`%s&%s%s`,
-			http_method,
+			oauth.HTTPMethod,
 			url.QueryEscape(oauth.BaseURL),
-			url.QueryEscape(params),
+			url.QueryEscape(oauth.Params),
 			url.QueryEscape("&oauth_consumer_key="+oauth.ConsumerKey),
 			url.QueryEscape("&oauth_nonce="+nonce),
-			url.QueryEscape("&oauth_signature_method="+signature_method),
+			url.QueryEscape("&oauth_signature_method="+oauth.SignatureMethod),
 			url.QueryEscape("&oauth_timestamp="+timestamp),
 			url.QueryEscape("&oauth_token="+oauth.TokenSecret),
 			"&oauth_version=1.0",

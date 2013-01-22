@@ -90,15 +90,16 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 
 func (suite *USSOTestSuite) TestSignRequestPlainText(c *C) {
 	baseUrl := "https://localhost"
-	ssoData := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenName: tokenName, TokenSecret: tokenSecret}
+	ssodata := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenName: tokenName, TokenSecret: tokenSecret}
 	request, _ := http.NewRequest("GET", baseUrl, nil)
-
-	err := ssoData.Sign(request)
-
+	ssodata.HTTPMethod = "GET"
+	ssodata.SignatureMethod = "PLAINTEXT"
+	err := ssodata.Sign(request)
 	c.Assert(err, IsNil)
 	authHeader := request.Header["Authorization"][0]
-	c.Assert(authHeader, Matches, `.*OAuth realm="API".*`)
-	c.Assert(authHeader, Matches, `.*oauth_consumer_key="`+url.QueryEscape(ssoData.ConsumerKey)+`".*`)
-	c.Assert(authHeader, Matches, `.*oauth_token="`+url.QueryEscape(ssoData.TokenKey)+`".*`)
-	c.Assert(authHeader, Matches, `.*oauth_signature="`+url.QueryEscape(ssoData.ConsumerSecret+`&`+ssoData.TokenSecret)+`.*`)
+	c.Assert(authHeader, Matches, `^OAuth.*`)
+	c.Assert(authHeader, Matches, `.*realm="API".*`)
+	c.Assert(authHeader, Matches, `.*oauth_consumer_key="`+url.QueryEscape(ssodata.ConsumerKey)+`".*`)
+	c.Assert(authHeader, Matches, `.*oauth_token="`+url.QueryEscape(ssodata.TokenKey)+`".*`)
+	c.Assert(authHeader, Matches, `.*oauth_signature="`+url.QueryEscape(ssodata.ConsumerSecret+`&`+ssodata.TokenSecret)+`.*`)
 }
