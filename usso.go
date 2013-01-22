@@ -20,16 +20,24 @@ func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
-type Credentials struct {
-	// Contains the user credentials used to get access token.
-	Email        string `json:"email"`
-	Password     string `json:"password"`
-	TokenName    string `json:"token_name"`
-	SSOServerURL string `json:"-"`
+type UbuntuSSOServer struct {
+	baseUrl string
 }
 
+// tokenURL returns the URL where the Ubuntu SSO tokens can be requested.
+func (server UbuntuSSOServer) tokenURL() string {
+	return server.baseUrl + "/api/v2/tokens"
+}
+
+// ProductionUbuntuSSOServer represents the production Ubuntu SSO server
+// located at https://login.ubuntu.com.
+var ProductionUbuntuSSOServer = UbuntuSSOServer{"https://login.ubuntu.com"}
+
+// StagingUbuntuSSOServer represents the staging Ubuntu SSO server located
+// at https://login.staging.ubuntu.com. Use it for testing.
+var StagingUbuntuSSOServer = UbuntuSSOServer{"https://login.staging.ubuntu.com"}
+
 type SSOData struct {
-	// Contains the 
 	BaseURL        string
 	ConsumerKey    string `json:"consumer_key"`
 	ConsumerSecret string `json:"consumer_secret"`
@@ -38,15 +46,19 @@ type SSOData struct {
 	TokenSecret    string `json:"token_secret"`
 }
 
-func GetToken(credentials *Credentials) (*SSOData, error) {
-	// Get a valid access token from credentials.
+func (server UbuntuSSOServer) GetToken(email string, password string, tokenName string) (*SSOData, error) {
+	credentials := map[string]string{
+		"email":      email,
+		"password":   password,
+		"token_name": tokenName,
+	}
 	json_credentials, err := json.Marshal(credentials)
 	if err != nil {
 		log.Printf("Error: %s\n", err)
 		return nil, err
 	}
 	response, err := http.Post(
-		credentials.SSOServerURL,
+		server.tokenURL(),
 		"application/json",
 		strings.NewReader(string(json_credentials)))
 	if err != nil {
