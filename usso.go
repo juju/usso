@@ -24,6 +24,7 @@ type UbuntuSSOServer struct {
 	baseUrl string
 }
 
+// tokenURL returns the URL where the Ubuntu SSO tokens can be requested.
 func (server UbuntuSSOServer) tokenURL() string {
 	return server.baseUrl + "/api/v2/tokens"
 }
@@ -37,7 +38,6 @@ var ProductionUbuntuSSOServer = UbuntuSSOServer{"https://login.ubuntu.com"}
 var StagingUbuntuSSOServer = UbuntuSSOServer{"https://login.staging.ubuntu.com"}
 
 type SSOData struct {
-	// Contains the 
 	BaseURL        string
 	ConsumerKey    string `json:"consumer_key"`
 	ConsumerSecret string `json:"consumer_secret"`

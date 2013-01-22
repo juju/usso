@@ -35,11 +35,13 @@ type SingleServingServer struct {
 	requestContent *string
 }
 
+// TestProductionUbuntuSSOServerURLs tests the URLs of the production server.
 func (suite *USSOTestSuite) TestProductionUbuntuSSOServerURLs(c *C) {
 	tokenURL := ProductionUbuntuSSOServer.tokenURL()
 	c.Assert(tokenURL, Equals, "https://login.ubuntu.com/api/v2/tokens")
 }
 
+// TestStagingUbuntuSSOServerURLs tests the URLs of the staging server.
 func (suite *USSOTestSuite) TestStagingUbuntuSSOServerURLs(c *C) {
 	tokenURL := StagingUbuntuSSOServer.tokenURL()
 	c.Assert(tokenURL, Equals, "https://login.staging.ubuntu.com/api/v2/tokens")
