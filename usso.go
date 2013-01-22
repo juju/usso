@@ -43,17 +43,17 @@ type Credentials struct {
 
 type SSOData struct {
 	// Contains the oauth data to perform a request.
-	HTTPMethod      string `json:"-"`
-	BaseURL         string `json:"-"`
-	Params          string `json:"-"`
-	Nonce           string `json:"-"`
-	Timestamp       string `json:"-"`
-	SignatureMethod string `json:"-"`
-	ConsumerKey     string `json:"consumer_key"`
-	ConsumerSecret  string `json:"consumer_secret"`
-	TokenKey        string `json:"token_key"`
-	TokenName       string `json:"token_name"`
-	TokenSecret     string `json:"token_secret"`
+	HTTPMethod      string     `json:"-"`
+	BaseURL         string     `json:"-"`
+	Params          url.Values `json:"-"`
+	Nonce           string     `json:"-"`
+	Timestamp       string     `json:"-"`
+	SignatureMethod string     `json:"-"`
+	ConsumerKey     string     `json:"consumer_key"`
+	ConsumerSecret  string     `json:"consumer_secret"`
+	TokenKey        string     `json:"token_key"`
+	TokenName       string     `json:"token_name"`
+	TokenSecret     string     `json:"token_secret"`
 }
 
 func GetToken(credentials *Credentials) (*SSOData, error) {
@@ -132,10 +132,12 @@ func (oauth *SSOData) signature() string {
 			oauth.ConsumerSecret,
 			oauth.TokenSecret)
 	case "HMAC-SHA1":
+		base_url, _ := NormalizeURL(oauth.BaseURL)
+		params, _ := NormalizeParameters(oauth.Params)
 		base_string := fmt.Sprint(`%s&%s%s`,
 			oauth.HTTPMethod,
-			url.QueryEscape(oauth.BaseURL),
-			url.QueryEscape(oauth.Params),
+			url.QueryEscape(base_url),
+			url.QueryEscape(params),
 			url.QueryEscape("&oauth_consumer_key="+oauth.ConsumerKey),
 			url.QueryEscape("&oauth_nonce="+oauth.Nonce),
 			url.QueryEscape("&oauth_signature_method="+oauth.SignatureMethod),
