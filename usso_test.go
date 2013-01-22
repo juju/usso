@@ -37,7 +37,8 @@ type SingleServingServer struct {
 
 // newSingleServingServer create a single-serving test http server which will
 // return only one response as defined by the passed arguments.
-func (suite *USSOTestSuite) newSingleServingServer(uri string, response string, code int) *SingleServingServer {
+func (suite *USSOTestSuite) newSingleServingServer(
+	uri string, response string, code int) *SingleServingServer {
 	var requestContent string
 	var requested bool
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -74,23 +75,29 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 		"consumer_secret": consumerSecret,
 	}
 	jsonServerResponseData, _ := json.Marshal(serverResponseData)
-	server := suite.newSingleServingServer("/", string(jsonServerResponseData), 200)
+	server := suite.newSingleServingServer(
+		"/", string(jsonServerResponseData), 200)
 	defer server.Close()
 
 	// The returned information is correct.
-	creds := Credentials{Email: email, Password: password, TokenName: tokenName, SSOServerURL: server.URL}
+	creds := Credentials{Email: email, Password: password,
+		TokenName: tokenName, SSOServerURL: server.URL}
 	ssodata, err := GetToken(&creds)
 	c.Assert(err, IsNil)
-	expectedSSOData := &SSOData{ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenSecret: tokenSecret, TokenName: tokenName}
+	expectedSSOData := &SSOData{ConsumerKey: consumerKey,
+		ConsumerSecret: consumerSecret, TokenKey: tokenKey,
+		TokenSecret: tokenSecret, TokenName: tokenName}
 	c.Assert(ssodata, DeepEquals, expectedSSOData)
-	// The request that the fake Ubuntu SSO Server got contained the credentials.
+	//The request that the fake Ubuntu SSO Server got contained the credentials.
 	expectedRequestContent, _ := json.Marshal(creds)
 	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
 }
 
 func (suite *USSOTestSuite) TestSignRequestPlainText(c *C) {
 	baseUrl := "https://localhost"
-	ssodata := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenName: tokenName, TokenSecret: tokenSecret}
+	ssodata := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey,
+		ConsumerSecret: consumerSecret, TokenKey: tokenKey,
+		TokenName: tokenName, TokenSecret: tokenSecret}
 	request, _ := http.NewRequest("GET", baseUrl, nil)
 	ssodata.HTTPMethod = "GET"
 	ssodata.SignatureMethod = "PLAINTEXT"
@@ -99,7 +106,31 @@ func (suite *USSOTestSuite) TestSignRequestPlainText(c *C) {
 	authHeader := request.Header["Authorization"][0]
 	c.Assert(authHeader, Matches, `^OAuth.*`)
 	c.Assert(authHeader, Matches, `.*realm="API".*`)
-	c.Assert(authHeader, Matches, `.*oauth_consumer_key="`+url.QueryEscape(ssodata.ConsumerKey)+`".*`)
-	c.Assert(authHeader, Matches, `.*oauth_token="`+url.QueryEscape(ssodata.TokenKey)+`".*`)
-	c.Assert(authHeader, Matches, `.*oauth_signature="`+url.QueryEscape(ssodata.ConsumerSecret+`&`+ssodata.TokenSecret)+`.*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_consumer_key="`+url.QueryEscape(ssodata.ConsumerKey)+`".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_token="`+url.QueryEscape(ssodata.TokenKey)+`".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_signature="`+url.QueryEscape(
+			ssodata.ConsumerSecret+`&`+ssodata.TokenSecret)+`.*`)
+}
+
+func (suite *USSOTestSuite) TestSignRequestSHA1(c *C) {
+	// Test the request signing with oauth_signature_method = SHA1
+	baseUrl := "https://localhost"
+	ssodata := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey,
+		ConsumerSecret: consumerSecret, TokenKey: tokenKey,
+		TokenName: tokenName, TokenSecret: tokenSecret}
+	request, _ := http.NewRequest("GET", baseUrl, nil)
+	ssodata.HTTPMethod = "GET"
+	ssodata.SignatureMethod = "SHA1"
+	err := ssodata.Sign(request)
+	c.Assert(err, IsNil)
+	authHeader := request.Header["Authorization"][0]
+	c.Assert(authHeader, Matches, `^OAuth.*`)
+	c.Assert(authHeader, Matches, `.*realm="API".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_consumer_key="`+url.QueryEscape(ssodata.ConsumerKey)+`".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_token="`+url.QueryEscape(ssodata.TokenKey)+`".*`)
 }
