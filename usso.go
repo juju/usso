@@ -84,6 +84,7 @@ func GetToken(credentials *Credentials) (*SSOData, error) {
 
 func (oauth *SSOData) GetAuthorizationHeader() string {
 	// Sign the provided request.
+	fmt.Println("Nonce: " + nonce)
 	nonce := nonce()
 	timestamp := timestamp()
 	signature := oauth.signature(nonce, timestamp)
