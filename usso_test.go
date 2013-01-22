@@ -120,10 +120,11 @@ func (suite *USSOTestSuite) TestSignRequestSHA1(c *C) {
 	baseUrl := "https://localhost"
 	ssodata := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey,
 		ConsumerSecret: consumerSecret, TokenKey: tokenKey,
-		TokenName: tokenName, TokenSecret: tokenSecret}
+		TokenName: tokenName, TokenSecret: tokenSecret,
+		Nonce: "10888885", Timestamp: "1358853126"}
 	request, _ := http.NewRequest("GET", baseUrl, nil)
 	ssodata.HTTPMethod = "GET"
-	ssodata.SignatureMethod = "SHA1"
+	ssodata.SignatureMethod = "HMAC-SHA1"
 	err := ssodata.Sign(request)
 	c.Assert(err, IsNil)
 	authHeader := request.Header["Authorization"][0]
@@ -133,4 +134,6 @@ func (suite *USSOTestSuite) TestSignRequestSHA1(c *C) {
 		`.*oauth_consumer_key="`+url.QueryEscape(ssodata.ConsumerKey)+`".*`)
 	c.Assert(authHeader, Matches,
 		`.*oauth_token="`+url.QueryEscape(ssodata.TokenKey)+`".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_signature="`+"Ja1P0EJ6RP6Ao-EWblIMOmPCrhc="+`.*`)
 }

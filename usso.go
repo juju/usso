@@ -46,6 +46,8 @@ type SSOData struct {
 	HTTPMethod      string `json:"-"`
 	BaseURL         string `json:"-"`
 	Params          string `json:"-"`
+	Nonce           string `json:"-"`
+	Timestamp       string `json:"-"`
 	SignatureMethod string `json:"-"`
 	ConsumerKey     string `json:"consumer_key"`
 	ConsumerSecret  string `json:"consumer_secret"`
@@ -84,10 +86,13 @@ func GetToken(credentials *Credentials) (*SSOData, error) {
 
 func (oauth *SSOData) GetAuthorizationHeader() string {
 	// Sign the provided request.
-	fmt.Println("Nonce: " + nonce)
-	nonce := nonce()
-	timestamp := timestamp()
-	signature := oauth.signature(nonce, timestamp)
+	if oauth.Nonce == "" {
+		oauth.Nonce = nonce()
+	}
+	if oauth.Timestamp == "" {
+		oauth.Timestamp = timestamp()
+	}
+	signature := oauth.signature()
 
 	auth := fmt.Sprintf(
 		`OAuth realm="API", `+
@@ -102,8 +107,8 @@ func (oauth *SSOData) GetAuthorizationHeader() string {
 		url.QueryEscape(oauth.TokenKey),
 		oauth.SignatureMethod,
 		signature,
-		url.QueryEscape(timestamp),
-		url.QueryEscape(nonce))
+		url.QueryEscape(oauth.Timestamp),
+		url.QueryEscape(oauth.Nonce))
 
 	return auth
 }
@@ -115,7 +120,7 @@ func (oauth *SSOData) Sign(req *http.Request) error {
 	return nil
 }
 
-func (oauth *SSOData) signature(nonce, timestamp string) string {
+func (oauth *SSOData) signature() string {
 	// Depending on the signature method, create the signature from the 
 	// consumer secret, the token secret and, if required, the URL.
 	// Supported signature methods are PLAINTEXT and HMAC-SHA1.
@@ -132,9 +137,9 @@ func (oauth *SSOData) signature(nonce, timestamp string) string {
 			url.QueryEscape(oauth.BaseURL),
 			url.QueryEscape(oauth.Params),
 			url.QueryEscape("&oauth_consumer_key="+oauth.ConsumerKey),
-			url.QueryEscape("&oauth_nonce="+nonce),
+			url.QueryEscape("&oauth_nonce="+oauth.Nonce),
 			url.QueryEscape("&oauth_signature_method="+oauth.SignatureMethod),
-			url.QueryEscape("&oauth_timestamp="+timestamp),
+			url.QueryEscape("&oauth_timestamp="+oauth.Timestamp),
 			url.QueryEscape("&oauth_token="+oauth.TokenSecret),
 			"&oauth_version=1.0",
 			"&size=original")
