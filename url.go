@@ -33,6 +33,12 @@ func NormalizeURL(input_url string) (string, error) {
 }
 
 
-func NormalizeParameters(parameters map[string]string) (string, error) {
-	return "", nil
+func NormalizeParameters(parameters url.Values) (string, error) {
+	filtered_map := make(url.Values, len(parameters))
+	for param, value := range parameters {
+		if param != "oauth_signature" {
+			filtered_map[param] = value
+		}
+	}
+	return filtered_map.Encode(), nil
 }
