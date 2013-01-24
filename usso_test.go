@@ -157,5 +157,5 @@ func (suite *USSOTestSuite) TestSignRequestSHA1(c *C) {
 	c.Assert(authHeader, Matches,
 		`.*oauth_token="`+url.QueryEscape(ssodata.TokenKey)+`".*`)
 	c.Assert(authHeader, Matches,
-		`.*oauth_signature="`+"Ja1P0EJ6RP6Ao-EWblIMOmPCrhc="+`.*`)
+		`.*oauth_signature="`+"amJnYeek4G9ObTgTiE2y6cwTyPg="+`.*`)
 }

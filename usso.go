@@ -4,6 +4,7 @@
 package usso
 
 import (
+	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/json"
@@ -141,27 +142,38 @@ func (oauth *SSOData) signature() string {
 	switch oauth.SignatureMethod {
 	case "PLAINTEXT":
 		return fmt.Sprintf(
-			`oauth_signature="%s%%26%s"`,
+			`%s%%26%s`,
 			oauth.ConsumerSecret,
 			oauth.TokenSecret)
 	case "HMAC-SHA1":
 		base_url, _ := NormalizeURL(oauth.BaseURL)
 		params, _ := NormalizeParameters(oauth.Params)
-		base_string := fmt.Sprint(`%s&%s%s`,
+		base_string := fmt.Sprintf(`%s&%s&%s%s%s%s%s%s%s`,
 			oauth.HTTPMethod,
 			url.QueryEscape(base_url),
 			url.QueryEscape(params),
-			url.QueryEscape("&oauth_consumer_key="+oauth.ConsumerKey),
+			url.QueryEscape("oauth_consumer_key="+oauth.ConsumerKey),
 			url.QueryEscape("&oauth_nonce="+oauth.Nonce),
 			url.QueryEscape("&oauth_signature_method="+oauth.SignatureMethod),
 			url.QueryEscape("&oauth_timestamp="+oauth.Timestamp),
-			url.QueryEscape("&oauth_token="+oauth.TokenSecret),
-			"&oauth_version=1.0",
-			"&size=original")
-		hasher := sha1.New()
-		hasher.Write([]byte(base_string))
-		sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
-		return sha
+			url.QueryEscape("&oauth_token="+oauth.TokenKey),
+			url.QueryEscape("&oauth_version=1.0"))
+		hashfun := hmac.New(sha1.New, []byte(
+			oauth.ConsumerSecret+"&"+oauth.TokenSecret))
+		hashfun.Write([]byte(base_string))
+		rawsignature := hashfun.Sum(nil)
+		base64signature := make(
+			[]byte, base64.StdEncoding.EncodedLen(len(rawsignature)))
+		base64.StdEncoding.Encode(base64signature, rawsignature)
+		return string(base64signature)
 	}
 	return ""
 }
+
+//var request string
+//hash := hmac.New(sha1.New, []byte(key))
+//hash.Write([]byte(request))
+//signature := hash.Sum(nil)
+//digest := make([]byte, base64.StdEncoding.EncodedLen(len(signature)))
+//base64.StdEncoding.Encode(digest, signature)
+//return string(digest), nil
