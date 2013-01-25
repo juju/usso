@@ -1,5 +1,3 @@
-// Copyright 2013 Canonical Ltd.  This software is licensed under the
-
 package usso
 
 import (
