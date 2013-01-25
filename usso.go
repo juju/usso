@@ -1,5 +1,4 @@
 // Copyright 2013 Canonical Ltd.  This software is licensed under the
-// GNU Affero General Public License version 3 (see the file LICENSE).
 
 package usso
 
@@ -169,11 +168,3 @@ func (oauth *SSOData) signature() string {
 	}
 	return ""
 }
-
-//var request string
-//hash := hmac.New(sha1.New, []byte(key))
-//hash.Write([]byte(request))
-//signature := hash.Sum(nil)
-//digest := make([]byte, base64.StdEncoding.EncodedLen(len(signature)))
-//base64.StdEncoding.Encode(digest, signature)
-//return string(digest), nil
