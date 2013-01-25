@@ -43,6 +43,11 @@ func main() {
 	}
 	fmt.Printf("Got tokens: %s\n", json_token)
 
+	// This would be the easiest way to get the account data.
+	//accounts, _ := server.GetAccounts(ssodata)
+	//fmt.Printf("Got accounts info: %s\n", accounts)
+
+	// But this shows how to sign a generic request.
 	ssodata.BaseURL = fmt.Sprintf(
 		"https://login.staging.ubuntu.com/api/v2/accounts/%s",
 		ssodata.ConsumerKey)

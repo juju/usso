@@ -1,7 +1,9 @@
 package usso
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -27,7 +29,7 @@ func (server UbuntuSSOServer) tokenURL() string {
 // AccountURL returns the URL where the Ubuntu SSO account information can be 
 // requested.
 func (server UbuntuSSOServer) AccountsURL() string {
-	return server.baseUrl + "/api/v2/accounts"
+	return server.baseUrl + "/api/v2/accounts/"
 }
 
 // ProductionUbuntuSSOServer represents the production Ubuntu SSO server
@@ -75,7 +77,7 @@ func (server UbuntuSSOServer) GetToken(
 
 func (server UbuntuSSOServer) GetAccounts(ssodata *SSOData) (string, error) {
 	// Returns all the Ubuntu SSO information related to this account.
-	ssodata.BaseURL = server.AccountsURL()
+	ssodata.BaseURL = server.AccountsURL() + ssodata.ConsumerKey
 	ssodata.HTTPMethod = "GET"
 	ssodata.SignatureMethod = "HMAC-SHA1"
 	request, err := http.NewRequest(ssodata.HTTPMethod, ssodata.BaseURL, nil)
