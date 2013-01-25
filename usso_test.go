@@ -1,5 +1,4 @@
 // Copyright 2013 Canonical Ltd.  This software is licensed under the
-// GNU Affero General Public License version 3 (see the file LICENSE).
 
 package usso
 
@@ -49,7 +48,8 @@ func (suite *USSOTestSuite) TestStagingUbuntuSSOServerURLs(c *C) {
 
 // newSingleServingServer create a single-serving test http server which will
 // return only one response as defined by the passed arguments.
-func newSingleServingServer(uri string, response string, code int) *SingleServingServer {
+func newSingleServingServer(
+	uri string, response string, code int) *SingleServingServer {
 	var requestContent string
 	var requested bool
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -89,16 +89,19 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 	if err != nil {
 		panic(err)
 	}
-	server := newSingleServingServer("/api/v2/tokens", string(jsonServerResponseData), 200)
+	server := newSingleServingServer("/api/v2/tokens",
+		string(jsonServerResponseData), 200)
 	var testSSOServer = &UbuntuSSOServer{server.URL}
 	defer server.Close()
 
 	// The returned information is correct.
 	ssodata, err := testSSOServer.GetToken(email, password, tokenName)
 	c.Assert(err, IsNil)
-	expectedSSOData := &SSOData{ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenSecret: tokenSecret, TokenName: tokenName}
+	expectedSSOData := &SSOData{ConsumerKey: consumerKey,
+		ConsumerSecret: consumerSecret, TokenKey: tokenKey,
+		TokenSecret: tokenSecret, TokenName: tokenName}
 	c.Assert(ssodata, DeepEquals, expectedSSOData)
-	// The request that the fake Ubuntu SSO Server got contained the credentials.
+	//The request that the fake Ubuntu SSO Server got contained the credentials.
 	credentials := map[string]string{
 		"email":      email,
 		"password":   password,
@@ -113,15 +116,45 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 
 func (suite *USSOTestSuite) TestSignRequestPlainText(c *C) {
 	baseUrl := "https://localhost"
-	ssoData := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey, ConsumerSecret: consumerSecret, TokenKey: tokenKey, TokenName: tokenName, TokenSecret: tokenSecret}
+	ssodata := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey,
+		ConsumerSecret: consumerSecret, TokenKey: tokenKey,
+		TokenName: tokenName, TokenSecret: tokenSecret}
 	request, _ := http.NewRequest("GET", baseUrl, nil)
-
-	err := ssoData.Sign(request)
-
+	ssodata.HTTPMethod = "GET"
+	ssodata.SignatureMethod = "PLAINTEXT"
+	err := ssodata.Sign(request)
 	c.Assert(err, IsNil)
 	authHeader := request.Header["Authorization"][0]
-	c.Assert(authHeader, Matches, `.*OAuth realm="API".*`)
-	c.Assert(authHeader, Matches, `.*oauth_consumer_key="`+url.QueryEscape(ssoData.ConsumerKey)+`".*`)
-	c.Assert(authHeader, Matches, `.*oauth_token="`+url.QueryEscape(ssoData.TokenKey)+`".*`)
-	c.Assert(authHeader, Matches, `.*oauth_signature="`+url.QueryEscape(ssoData.ConsumerSecret+`&`+ssoData.TokenSecret)+`.*`)
+	c.Assert(authHeader, Matches, `^OAuth.*`)
+	c.Assert(authHeader, Matches, `.*realm="API".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_consumer_key="`+url.QueryEscape(ssodata.ConsumerKey)+`".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_token="`+url.QueryEscape(ssodata.TokenKey)+`".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_signature="`+url.QueryEscape(
+			ssodata.ConsumerSecret+`&`+ssodata.TokenSecret)+`.*`)
+}
+
+func (suite *USSOTestSuite) TestSignRequestSHA1(c *C) {
+	// Test the request signing with oauth_signature_method = SHA1
+	baseUrl := "https://localhost"
+	ssodata := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey,
+		ConsumerSecret: consumerSecret, TokenKey: tokenKey,
+		TokenName: tokenName, TokenSecret: tokenSecret,
+		Nonce: "10888885", Timestamp: "1358853126"}
+	request, _ := http.NewRequest("GET", baseUrl, nil)
+	ssodata.HTTPMethod = "GET"
+	ssodata.SignatureMethod = "HMAC-SHA1"
+	err := ssodata.Sign(request)
+	c.Assert(err, IsNil)
+	authHeader := request.Header["Authorization"][0]
+	c.Assert(authHeader, Matches, `^OAuth.*`)
+	c.Assert(authHeader, Matches, `.*realm="API".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_consumer_key="`+url.QueryEscape(ssodata.ConsumerKey)+`".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_token="`+url.QueryEscape(ssodata.TokenKey)+`".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_signature="`+"amJnYeek4G9ObTgTiE2y6cwTyPg="+`.*`)
 }
