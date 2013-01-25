@@ -49,7 +49,7 @@ func main() {
 	ssodata.HTTPMethod = "GET"
 	ssodata.SignatureMethod = signature_method
 	request, _ := http.NewRequest(ssodata.HTTPMethod, ssodata.BaseURL, nil)
-	ssodata.Sign(request)
+	usso.SignRequest(ssodata, request)
 
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
