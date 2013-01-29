@@ -5,14 +5,15 @@ import (
 	"net/url"
 )
 
-// No need to touch anything.
+// When NormalizeURL() is passed a simple URL, it will make no changes
+// to it.
 func (suite *USSOTestSuite) TestNormalizeURLReturnsBasicURL(c *gocheck.C) {
 	output, err := NormalizeURL("http://example.com/path")
 	c.Check(err, gocheck.Equals, nil)
 	c.Check(output, gocheck.Equals, "http://example.com/path")
 }
 
-// Remove the port 80.
+// NormalizeURL() strips the ":80" from http:// URLs that contain it.
 func (suite *USSOTestSuite) TestNormalizeURLStripsStandardHTTPPort(
 	c *gocheck.C) {
 	output, err := NormalizeURL("http://example.com:80/path")
@@ -20,7 +21,7 @@ func (suite *USSOTestSuite) TestNormalizeURLStripsStandardHTTPPort(
 	c.Check(output, gocheck.Equals, "http://example.com/path")
 }
 
-// Remove the port 443.
+// NormalizeURL() strips the ":443" from https:// URLs that contain it.
 func (suite *USSOTestSuite) TestNormalizeURLStripsStandardHTTPSPort(
 	c *gocheck.C) {
 	output, err := NormalizeURL("https://example.com:443/path")
@@ -28,7 +29,7 @@ func (suite *USSOTestSuite) TestNormalizeURLStripsStandardHTTPSPort(
 	c.Check(output, gocheck.Equals, "https://example.com/path")
 }
 
-// Leave non standard port where it is.
+// NormalizeURL() does not remove non-standard ports from the URL.
 func (suite *USSOTestSuite) TestNormalizeURLLeavesNonstandardPort(
 	c *gocheck.C) {
 	output, err := NormalizeURL("http://example.com:8080/")
@@ -36,14 +37,15 @@ func (suite *USSOTestSuite) TestNormalizeURLLeavesNonstandardPort(
 	c.Check(output, gocheck.Equals, "http://example.com:8080/")
 }
 
-// Remove query string.
+// NormalizeURL() strips the query string from URLs.
 func (suite *USSOTestSuite) TestNormalizeURLStripsParameters(c *gocheck.C) {
 	output, err := NormalizeURL("http://example.com/path?query=value&param=arg")
 	c.Check(err, gocheck.Equals, nil)
 	c.Check(output, gocheck.Equals, "http://example.com/path")
 }
 
-// Parse one key/value parameter correctly.
+// NormalizeParameters() takes a url.Values instance and returns an
+// encoded key=value string containing the parameters in that instance.
 func (suite *USSOTestSuite) TestNormalizeParametersReturnsParameters(
 	c *gocheck.C) {
 	output, err := NormalizeParameters(url.Values{"param": []string{"value"}})
@@ -51,7 +53,8 @@ func (suite *USSOTestSuite) TestNormalizeParametersReturnsParameters(
 	c.Check(output, gocheck.Equals, "param=value")
 }
 
-// Parse key/value parameters correctly, note the order of the pairs can vary.
+// NormalizeParameters() encodes multiple key/value parameters as a
+// query string.
 func (suite *USSOTestSuite) TestNormalizeParametersConcatenatesParameters(
 	c *gocheck.C) {
 	output, err := NormalizeParameters(
@@ -60,7 +63,8 @@ func (suite *USSOTestSuite) TestNormalizeParametersConcatenatesParameters(
 	c.Check(output, gocheck.Matches, "(a=1&b=2|b=2&a=1)")
 }
 
-// Escapes the parameters correctly.
+// NormalizeParameters() escapes the parameters correctly when encoding
+// them as a query string.
 func (suite *USSOTestSuite) TestNormalizeParametersEscapesParameters(
 	c *gocheck.C) {
 	output, err := NormalizeParameters(url.Values{"a&b": []string{"1"}})
@@ -68,8 +72,9 @@ func (suite *USSOTestSuite) TestNormalizeParametersEscapesParameters(
 	c.Check(output, gocheck.Equals, "a%26b=1")
 }
 
-// oauth_signature could appear in the query string but has to be removed
-// from the normalized parameter.
+// If oauth_signature appears in the parameters passed to
+// NormalizeParameters(), it is omitted in the returned string as it does not
+// have to be included in the computation of the new oauth_signature.
 func (suite *USSOTestSuite) TestNormalizeParametersOmitsOAuthSignature(
 	c *gocheck.C) {
 	params := url.Values{
