@@ -28,8 +28,8 @@ func (suite *USSOTestSuite) TestSignRequestPlainText(c *C) {
 			ssodata.ConsumerSecret+`&`+ssodata.TokenSecret)+`.*`)
 }
 
+// Test the request signing with oauth_signature_method = SHA1
 func (suite *USSOTestSuite) TestSignRequestSHA1(c *C) {
-	// Test the request signing with oauth_signature_method = SHA1
 	baseUrl := "https://localhost"
 	ssodata := SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey,
 		ConsumerSecret: consumerSecret, TokenKey: tokenKey,

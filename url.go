@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Remove the standard ports from the URL.
 func normalizeHost(scheme, host_spec string) string {
 	standard_ports := map[string]string{
 		"http":  "80",
@@ -19,6 +20,7 @@ func normalizeHost(scheme, host_spec string) string {
 	return host_spec
 }
 
+// Normalize the URL according to OAuth specs.
 func NormalizeURL(input_url string) (string, error) {
 	parsed_url, err := url.Parse(input_url)
 	if err != nil {
@@ -26,10 +28,12 @@ func NormalizeURL(input_url string) (string, error) {
 	}
 
 	host := normalizeHost(parsed_url.Scheme, parsed_url.Host)
-	normalized_url := fmt.Sprintf("%v://%v%v", parsed_url.Scheme, host, parsed_url.Path)
+	normalized_url := fmt.Sprintf(
+		"%v://%v%v", parsed_url.Scheme, host, parsed_url.Path)
 	return normalized_url, nil
 }
 
+// Normalize the parameters in the query string according to OAuth specs.
 func NormalizeParameters(parameters url.Values) (string, error) {
 	filtered_map := make(url.Values, len(parameters))
 	for param, value := range parameters {

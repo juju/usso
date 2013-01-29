@@ -40,9 +40,9 @@ var ProductionUbuntuSSOServer = UbuntuSSOServer{"https://login.ubuntu.com"}
 // at https://login.staging.ubuntu.com. Use it for testing.
 var StagingUbuntuSSOServer = UbuntuSSOServer{"https://login.staging.ubuntu.com"}
 
+// Giving user credentials and token name, retrieves oauth credentials
+// for the users, the oauth credentials can be used later to sign requests.
 func (server UbuntuSSOServer) GetToken(
-	// Giving user credentials and token name, retrieves oauth credentials
-	// for the users, the oauth credentials can be used later to sign requests.
 	email string, password string, tokenName string) (*SSOData, error) {
 	credentials := map[string]string{
 		"email":      email,
@@ -75,8 +75,8 @@ func (server UbuntuSSOServer) GetToken(
 	return &ssodata, nil
 }
 
+// Returns all the Ubuntu SSO information related to this account.
 func (server UbuntuSSOServer) GetAccounts(ssodata *SSOData) (string, error) {
-	// Returns all the Ubuntu SSO information related to this account.
 	ssodata.BaseURL = server.AccountsURL() + ssodata.ConsumerKey
 	ssodata.HTTPMethod = "GET"
 	ssodata.SignatureMethod = "HMAC-SHA1"
@@ -102,13 +102,13 @@ func (server UbuntuSSOServer) GetAccounts(ssodata *SSOData) (string, error) {
 	return fmt.Sprint(b.String()), nil
 }
 
+// Given oauth credentials and a request, return it signed.
 func SignRequest(ssodata *SSOData, request *http.Request) error {
-	// Given oauth credentials and a request, return it signed.
 	return ssodata.SignRequest(request)
 }
 
+// Given oauth credentials return a valid http authorization header.
 func GetAuthorizationHeader(ssodata *SSOData) (string, error) {
-	// Given oauth credentials return a valid http authorization header.
 	header, err := ssodata.GetAuthorizationHeader()
 	return header, err
 }

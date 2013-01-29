@@ -13,23 +13,23 @@ import (
 	"time"
 )
 
+// Initialize the random generator.
 func init() {
-	// Initialize the random generator.
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
+// Create a timestamp used in authorization header.
 func timestamp() string {
-	// Create a timestamp used in authorization header.
 	return strconv.Itoa(int(time.Now().Unix()))
 }
 
+// Create a nonce used in authorization header.
 func nonce() string {
-	// Create a nonce used in authorization header.
 	return strconv.Itoa(rand.Intn(100000000))
 }
 
+// Contains the oauth data to perform a request.
 type SSOData struct {
-	// Contains the oauth data to perform a request.
 	HTTPMethod      string     `json:"-"`
 	BaseURL         string     `json:"-"`
 	Params          url.Values `json:"-"`
@@ -43,11 +43,10 @@ type SSOData struct {
 	TokenSecret     string     `json:"token_secret"`
 }
 
+// Depending on the signature method, create the signature from the 
+// consumer secret, the token secret and, if required, the URL.
+// Supported signature methods are PLAINTEXT and HMAC-SHA1.
 func (oauth *SSOData) signature() (string, error) {
-	// Depending on the signature method, create the signature from the 
-	// consumer secret, the token secret and, if required, the URL.
-	// Supported signature methods are PLAINTEXT and HMAC-SHA1.
-
 	switch oauth.SignatureMethod {
 	case "PLAINTEXT":
 		return fmt.Sprintf(
@@ -88,8 +87,8 @@ func (oauth *SSOData) signature() (string, error) {
 	return "", nil
 }
 
+// Sign the provided request.
 func (oauth *SSOData) GetAuthorizationHeader() (string, error) {
-	// Sign the provided request.
 	if oauth.Nonce == "" {
 		oauth.Nonce = nonce()
 	}
@@ -119,8 +118,8 @@ func (oauth *SSOData) GetAuthorizationHeader() (string, error) {
 	return auth, nil
 }
 
+// Sign the provided request.
 func (oauth *SSOData) SignRequest(req *http.Request) error {
-	// Sign the provided request.
 	auth, error := oauth.GetAuthorizationHeader()
 	req.Header.Add("Authorization", auth)
 	return error
