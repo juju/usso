@@ -19,13 +19,6 @@ func (e *ErrWrongSignatureMethod) Error() string {
 	return "usso/oauth: Oauth Signature Method not supported."
 }
 
-type SignatureMethod string
-
-const (
-	plaintext SignatureMethod = "PLAINTEXT"
-	hmac_sha1 SignatureMethod = "HMAC-SHA1"
-)
-
 // Initialize the random generator.
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -43,17 +36,17 @@ func nonce() string {
 
 // Contains the oauth data to perform a request.
 type SSOData struct {
-	HTTPMethod      string          `json:"-"`
-	BaseURL         string          `json:"-"`
-	Params          url.Values      `json:"-"`
-	Nonce           string          `json:"-"`
-	Timestamp       string          `json:"-"`
-	SignatureMethod SignatureMethod `json:"-"`
-	ConsumerKey     string          `json:"consumer_key"`
-	ConsumerSecret  string          `json:"consumer_secret"`
-	TokenKey        string          `json:"token_key"`
-	TokenName       string          `json:"token_name"`
-	TokenSecret     string          `json:"token_secret"`
+	HTTPMethod      string     `json:"-"`
+	BaseURL         string     `json:"-"`
+	Params          url.Values `json:"-"`
+	Nonce           string     `json:"-"`
+	Timestamp       string     `json:"-"`
+	SignatureMethod string     `json:"-"`
+	ConsumerKey     string     `json:"consumer_key"`
+	ConsumerSecret  string     `json:"consumer_secret"`
+	TokenKey        string     `json:"token_key"`
+	TokenName       string     `json:"token_name"`
+	TokenSecret     string     `json:"token_secret"`
 }
 
 // Depending on the signature method, create the signature from the 
