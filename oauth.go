@@ -4,13 +4,26 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+)
+
+// Raised if the oauth_signature_method is not supported
+type ErrWrongSignatureMethod struct{}
+
+func (e *ErrWrongSignatureMethod) Error() string {
+	return "usso/oauth: Oauth Signature Method not supported."
+}
+
+type SignatureMethod string
+
+const (
+	plaintext SignatureMethod = "PLAINTEXT"
+	hmac_sha1 SignatureMethod = "HMAC-SHA1"
 )
 
 // Initialize the random generator.
@@ -30,17 +43,17 @@ func nonce() string {
 
 // Contains the oauth data to perform a request.
 type SSOData struct {
-	HTTPMethod      string     `json:"-"`
-	BaseURL         string     `json:"-"`
-	Params          url.Values `json:"-"`
-	Nonce           string     `json:"-"`
-	Timestamp       string     `json:"-"`
-	SignatureMethod string     `json:"-"`
-	ConsumerKey     string     `json:"consumer_key"`
-	ConsumerSecret  string     `json:"consumer_secret"`
-	TokenKey        string     `json:"token_key"`
-	TokenName       string     `json:"token_name"`
-	TokenSecret     string     `json:"token_secret"`
+	HTTPMethod      string          `json:"-"`
+	BaseURL         string          `json:"-"`
+	Params          url.Values      `json:"-"`
+	Nonce           string          `json:"-"`
+	Timestamp       string          `json:"-"`
+	SignatureMethod SignatureMethod `json:"-"`
+	ConsumerKey     string          `json:"consumer_key"`
+	ConsumerSecret  string          `json:"consumer_secret"`
+	TokenKey        string          `json:"token_key"`
+	TokenName       string          `json:"token_name"`
+	TokenSecret     string          `json:"token_secret"`
 }
 
 // Depending on the signature method, create the signature from the 
@@ -68,7 +81,8 @@ func (oauth *SSOData) signature() (string, error) {
 			url.QueryEscape(params),
 			url.QueryEscape("oauth_consumer_key="+oauth.ConsumerKey),
 			url.QueryEscape("&oauth_nonce="+oauth.Nonce),
-			url.QueryEscape("&oauth_signature_method="+oauth.SignatureMethod),
+			url.QueryEscape(
+				"&oauth_signature_method="+string(oauth.SignatureMethod)),
 			url.QueryEscape("&oauth_timestamp="+oauth.Timestamp),
 			url.QueryEscape("&oauth_token="+oauth.TokenKey),
 			url.QueryEscape("&oauth_version=1.0"))
@@ -81,9 +95,9 @@ func (oauth *SSOData) signature() (string, error) {
 		base64.StdEncoding.Encode(base64signature, rawsignature)
 		return string(base64signature), nil
 	default:
-		return "", errors.New(
-			"usso/oauth: Oauth Signature Method not supported.")
+		return "", &ErrWrongSignatureMethod{}
 	}
+	fmt.Println(oauth.SignatureMethod)
 	return "", nil
 }
 

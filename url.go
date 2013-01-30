@@ -3,6 +3,7 @@ package usso
 import (
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 )
 
@@ -34,12 +35,28 @@ func NormalizeURL(input_url string) (string, error) {
 }
 
 // Normalize the parameters in the query string according to OAuth specs.
+// url.Values.Encode encoded the GET parameters in a consistent order
+// we do the encoding ourselves.
 func NormalizeParameters(parameters url.Values) (string, error) {
 	filtered_map := make(url.Values, len(parameters))
-	for param, value := range parameters {
-		if param != "oauth_signature" {
-			filtered_map[param] = value
+	keys := make([]string, len(parameters))
+	i := 0
+	for key, _ := range parameters {
+		keys[i] = key
+		i++
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if key != "oauth_signature" {
+			filtered_map[key] = parameters[key]
 		}
 	}
-	return filtered_map.Encode(), nil
+	parts := make([]string, 0, len(filtered_map))
+	for _, key := range keys {
+		prefix := url.QueryEscape(key) + "="
+		for _, v := range filtered_map[key] {
+			parts = append(parts, prefix+url.QueryEscape(v))
+		}
+	}
+	return strings.Join(parts, "&"), nil
 }

@@ -60,7 +60,7 @@ func (suite *USSOTestSuite) TestNormalizeParametersConcatenatesParameters(
 	output, err := NormalizeParameters(
 		url.Values{"a": []string{"1"}, "b": []string{"2"}})
 	c.Check(err, gocheck.Equals, nil)
-	c.Check(output, gocheck.Matches, "(a=1&b=2|b=2&a=1)")
+	c.Check(output, gocheck.Matches, "(a=1&b=2)")
 }
 
 // NormalizeParameters() escapes the parameters correctly when encoding
@@ -84,5 +84,5 @@ func (suite *USSOTestSuite) TestNormalizeParametersOmitsOAuthSignature(
 	}
 	output, err := NormalizeParameters(params)
 	c.Check(err, gocheck.Equals, nil)
-	c.Check(output, gocheck.Matches, "(a=1&z=26|z=26&a=1)")
+	c.Check(output, gocheck.Matches, "(a=1&z=26)")
 }
