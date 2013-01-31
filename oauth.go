@@ -67,7 +67,7 @@ type HMACSHA1 struct{}
 func (HMACSHA1) Name() string { return "HMAC-SHA1" }
 func (HMACSHA1) Signature(
 	ssodata *SSOData, rp *RequestParameters) (string, error) {
-	base_url, err := NormalizeURL(rp.BaseURL)
+	baseUrl, err := NormalizeURL(rp.BaseURL)
 	if err != nil {
 		return "", err
 	}
@@ -75,9 +75,9 @@ func (HMACSHA1) Signature(
 	if err != nil {
 		return "", err
 	}
-	base_string := fmt.Sprintf(`%s&%s&%s%s%s%s%s%s%s`,
+	baseString := fmt.Sprintf(`%s&%s&%s%s%s%s%s%s%s`,
 		rp.HTTPMethod,
-		url.QueryEscape(base_url),
+		url.QueryEscape(baseUrl),
 		url.QueryEscape(params),
 		url.QueryEscape("oauth_consumer_key="+ssodata.ConsumerKey),
 		url.QueryEscape("&oauth_nonce="+rp.Nonce),
@@ -88,7 +88,7 @@ func (HMACSHA1) Signature(
 		url.QueryEscape("&oauth_version=1.0"))
 	hashfun := hmac.New(sha1.New, []byte(
 		ssodata.ConsumerSecret+"&"+ssodata.TokenSecret))
-	hashfun.Write([]byte(base_string))
+	hashfun.Write([]byte(baseString))
 	rawsignature := hashfun.Sum(nil)
 	base64signature := make(
 		[]byte, base64.StdEncoding.EncodedLen(len(rawsignature)))

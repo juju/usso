@@ -49,7 +49,7 @@ func (server UbuntuSSOServer) GetToken(
 		"password":   password,
 		"token_name": tokenName,
 	}
-	json_credentials, err := json.Marshal(credentials)
+	jsonCredentials, err := json.Marshal(credentials)
 	if err != nil {
 		log.Printf("Error: %s\n", err)
 		return nil, err
@@ -57,7 +57,7 @@ func (server UbuntuSSOServer) GetToken(
 	response, err := http.Post(
 		server.tokenURL(),
 		"application/json",
-		strings.NewReader(string(json_credentials)))
+		strings.NewReader(string(jsonCredentials)))
 	if err != nil {
 		return nil, err
 	}
