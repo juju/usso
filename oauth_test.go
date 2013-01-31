@@ -8,6 +8,7 @@ import (
 
 type OAuthTestSuite struct {
 	ssodata SSOData
+	rp      RequestParameters
 	request *http.Request
 }
 
@@ -15,17 +16,19 @@ var _ = Suite(&OAuthTestSuite{})
 
 func (suite *OAuthTestSuite) SetUpTest(c *C) {
 	baseUrl := "https://localhost"
-	suite.ssodata = SSOData{BaseURL: baseUrl, ConsumerKey: consumerKey,
+	suite.ssodata = SSOData{ConsumerKey: consumerKey,
 		ConsumerSecret: consumerSecret, TokenKey: tokenKey,
-		TokenName: tokenName, TokenSecret: tokenSecret,
+		TokenName: tokenName, TokenSecret: tokenSecret}
+	suite.rp = RequestParameters{BaseURL: baseUrl, HTTPMethod: "GET",
 		Nonce: "10888885", Timestamp: "1358853126"}
 	suite.request, _ = http.NewRequest("GET", baseUrl, nil)
-	suite.ssodata.HTTPMethod = "GET"
 }
 
+// Test the request signing with oauth_signature_method = PLAINTEXT
 func (suite *OAuthTestSuite) TestSignRequestPlainText(c *C) {
-	suite.ssodata.SignatureMethod = "PLAINTEXT"
-	err := suite.ssodata.SignRequest(suite.request)
+	// FIXME use rp SignatureMethod
+	suite.rp.SignatureMethod = PLAINTEXT{}
+	err := suite.ssodata.SignRequest(&suite.rp, suite.request)
 	if err != nil {
 		c.Log(err)
 		c.FailNow()
@@ -40,13 +43,15 @@ func (suite *OAuthTestSuite) TestSignRequestPlainText(c *C) {
 		`.*oauth_token="`+url.QueryEscape(suite.ssodata.TokenKey)+`".*`)
 	c.Assert(authHeader, Matches,
 		`.*oauth_signature="`+url.QueryEscape(
-			suite.ssodata.ConsumerSecret+`&`+suite.ssodata.TokenSecret)+`.*`)
+			suite.ssodata.ConsumerSecret)+`&`+url.QueryEscape(
+			suite.ssodata.TokenSecret)+`.*`)
 }
 
 // Test the request signing with oauth_signature_method = SHA1
 func (suite *OAuthTestSuite) TestSignRequestSHA1(c *C) {
-	suite.ssodata.SignatureMethod = "HMAC-SHA1"
-	err := suite.ssodata.SignRequest(suite.request)
+	// FIXME use rp SignatureMethod
+	suite.rp.SignatureMethod = HMACSHA1{}
+	err := suite.ssodata.SignRequest(&suite.rp, suite.request)
 	if err != nil {
 		c.Log(err)
 		c.FailNow()
@@ -61,16 +66,4 @@ func (suite *OAuthTestSuite) TestSignRequestSHA1(c *C) {
 		`.*oauth_token="`+url.QueryEscape(suite.ssodata.TokenKey)+`".*`)
 	c.Assert(authHeader, Matches,
 		`.*oauth_signature="`+"amJnYeek4G9ObTgTiE2y6cwTyPg="+`.*`)
-}
-
-// Test the request signing with BAD oauth_signature_method
-func (suite *OAuthTestSuite) TestSignRequestBad(c *C) {
-	suite.ssodata.SignatureMethod = "XXX"
-	// "XXX" is not a supported oauth_signature_method
-	err := suite.ssodata.SignRequest(suite.request)
-	// Test that the error has being raised
-	if err.Error() != "usso/oauth: Oauth Signature Method not supported." {
-		// If there is no error the test fails
-		c.Failed()
-	}
 }

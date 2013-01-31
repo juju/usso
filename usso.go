@@ -77,14 +77,16 @@ func (server UbuntuSSOServer) GetToken(
 
 // Returns all the Ubuntu SSO information related to this account.
 func (server UbuntuSSOServer) GetAccounts(ssodata *SSOData) (string, error) {
-	ssodata.BaseURL = server.AccountsURL() + ssodata.ConsumerKey
-	ssodata.HTTPMethod = "GET"
-	ssodata.SignatureMethod = "HMAC-SHA1"
-	request, err := http.NewRequest(ssodata.HTTPMethod, ssodata.BaseURL, nil)
+	rp := RequestParameters{
+		BaseURL:         server.AccountsURL() + ssodata.ConsumerKey,
+		HTTPMethod:      "GET",
+		SignatureMethod: HMACSHA1{}}
+
+	request, err := http.NewRequest(rp.HTTPMethod, rp.BaseURL, nil)
 	if err != nil {
 		return "", err
 	}
-	err = SignRequest(ssodata, request)
+	err = SignRequest(ssodata, &rp, request)
 	if err != nil {
 		return "", err
 	}
@@ -103,12 +105,14 @@ func (server UbuntuSSOServer) GetAccounts(ssodata *SSOData) (string, error) {
 }
 
 // Given oauth credentials and a request, return it signed.
-func SignRequest(ssodata *SSOData, request *http.Request) error {
-	return ssodata.SignRequest(request)
+func SignRequest(
+	ssodata *SSOData, rp *RequestParameters, request *http.Request) error {
+	return ssodata.SignRequest(rp, request)
 }
 
 // Given oauth credentials return a valid http authorization header.
-func GetAuthorizationHeader(ssodata *SSOData) (string, error) {
-	header, err := ssodata.GetAuthorizationHeader()
+func GetAuthorizationHeader(
+	ssodata *SSOData, rp *RequestParameters) (string, error) {
+	header, err := ssodata.GetAuthorizationHeader(rp)
 	return header, err
 }

@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-var email, password, tokenName, signature_method string
+var email, password string
 
 func inputParams() {
 	fmt.Println("This application will query the staging Ubuntu SSO Server" +
@@ -19,9 +19,6 @@ func inputParams() {
 	fmt.Print("Enter password: ")
 	fmt.Scanf("%s", &password)
 	fmt.Print("Enter token name: ")
-	fmt.Scanf("%s", &tokenName)
-	fmt.Print("Enter signature method (PLAINTEXT or HMAC-SHA1): ")
-	fmt.Scanf("%s", &signature_method)
 }
 
 func main() {
@@ -32,7 +29,7 @@ func main() {
 	server := usso.StagingUbuntuSSOServer
 	// One would use server := usso.ProductionUbuntuSSOServer 
 	// to use the production Ubuntu SSO Server.
-	ssodata, err := server.GetToken(email, password, tokenName)
+	ssodata, err := server.GetToken(email, password, "usso")
 	if err != nil {
 		panic(err)
 	}
@@ -48,13 +45,15 @@ func main() {
 	//fmt.Printf("Got accounts info: %s\n", accounts)
 
 	// But this shows how to sign a generic request.
-	ssodata.BaseURL = fmt.Sprintf(
+	rp := usso.RequestParameters{BaseURL: fmt.Sprintf(
 		"https://login.staging.ubuntu.com/api/v2/accounts/%s",
-		ssodata.ConsumerKey)
-	ssodata.HTTPMethod = "GET"
-	ssodata.SignatureMethod = signature_method
-	request, _ := http.NewRequest(ssodata.HTTPMethod, ssodata.BaseURL, nil)
-	usso.SignRequest(ssodata, request)
+		ssodata.ConsumerKey), HTTPMethod: "GET",
+		SignatureMethod: usso.HMACSHA1{}}
+	request, _ := http.NewRequest(rp.HTTPMethod, rp.BaseURL, nil)
+	usso.SignRequest(ssodata, &rp, request)
+
+	//FIXME remove
+	fmt.Printf("request: %+v\n", request)
 
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
