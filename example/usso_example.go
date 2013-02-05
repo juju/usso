@@ -51,10 +51,6 @@ func main() {
 		SignatureMethod: usso.HMACSHA1{}}
 	request, _ := http.NewRequest(rp.HTTPMethod, rp.BaseURL, nil)
 	usso.SignRequest(ssodata, &rp, request)
-
-	//FIXME remove
-	fmt.Printf("request: %+v\n", request)
-
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 	}

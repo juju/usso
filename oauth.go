@@ -53,7 +53,11 @@ type SignatureMethod interface {
 
 type PLAINTEXT struct{}
 
+// Return the name of the signature method, used to compose the 
+// Authentication Header.
 func (PLAINTEXT) Name() string { return "PLAINTEXT" }
+
+// Calculate the oaut_signature part of the Authentication Header.
 func (PLAINTEXT) Signature(
 	ssodata *SSOData, rp *RequestParameters) (string, error) {
 	return fmt.Sprintf(
@@ -64,7 +68,11 @@ func (PLAINTEXT) Signature(
 
 type HMACSHA1 struct{}
 
+// Return the name of the signature method, used to compose the 
+// Authentication Header.
 func (HMACSHA1) Name() string { return "HMAC-SHA1" }
+
+// Calculate the oaut_signature part of the Authentication Header.
 func (HMACSHA1) Signature(
 	ssodata *SSOData, rp *RequestParameters) (string, error) {
 	baseUrl, err := NormalizeURL(rp.BaseURL)

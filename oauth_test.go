@@ -24,9 +24,8 @@ func (suite *OAuthTestSuite) SetUpTest(c *C) {
 	suite.request, _ = http.NewRequest("GET", baseUrl, nil)
 }
 
-// Test the request signing with oauth_signature_method = PLAINTEXT
+// It is possible to sign a request with oauth_signature_method = PLAINTEXT
 func (suite *OAuthTestSuite) TestSignRequestPlainText(c *C) {
-	// FIXME use rp SignatureMethod
 	suite.rp.SignatureMethod = PLAINTEXT{}
 	err := suite.ssodata.SignRequest(&suite.rp, suite.request)
 	if err != nil {
@@ -47,9 +46,8 @@ func (suite *OAuthTestSuite) TestSignRequestPlainText(c *C) {
 			suite.ssodata.TokenSecret)+`.*`)
 }
 
-// Test the request signing with oauth_signature_method = SHA1
+// It is possible to sign a request  with oauth_signature_method = SHA1
 func (suite *OAuthTestSuite) TestSignRequestSHA1(c *C) {
-	// FIXME use rp SignatureMethod
 	suite.rp.SignatureMethod = HMACSHA1{}
 	err := suite.ssodata.SignRequest(&suite.rp, suite.request)
 	if err != nil {
