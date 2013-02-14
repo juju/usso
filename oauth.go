@@ -140,6 +140,9 @@ func (ssodata *SSOData) GetAuthorizationHeader(
 func (ssodata *SSOData) SignRequest(
 	rp *RequestParameters, req *http.Request) error {
 	auth, error := ssodata.GetAuthorizationHeader(rp)
+	if req.Header == nil {
+		req.Header = make(map[string][]string)
+	}
 	req.Header.Add("Authorization", auth)
 	return error
 }

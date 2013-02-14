@@ -6,16 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
 	"strings"
-	"time"
 )
-
-func init() {
-	// Initialize the random generator.
-	rand.Seed(time.Now().UTC().UnixNano())
-}
 
 type UbuntuSSOServer struct {
 	baseUrl string
