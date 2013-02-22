@@ -112,8 +112,8 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
 }
 
+// GetToken should return empty credentials and an error, if wrong account is provided.
 func (suite *USSOTestSuite) TestGetTokenFails(c *C) {
-	// Simulate an invalid Ubuntu SSO Server response.
 	server := newSingleServingServer("/api/v2/tokens", "{}", 200)
 	var testSSOServer = &UbuntuSSOServer{server.URL}
 	defer server.Close()
