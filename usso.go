@@ -3,6 +3,7 @@ package usso
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -53,6 +54,12 @@ func (server UbuntuSSOServer) GetToken(
 		strings.NewReader(string(jsonCredentials)))
 	if err != nil {
 		return nil, err
+	}
+	if response.StatusCode == 404 {
+		return nil, errors.New("Wrong credentials.")
+	}
+	if response.StatusCode != 200 {
+		return nil, fmt.Errorf("SSO Error: %s\n", response.Status)
 	}
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {

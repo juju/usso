@@ -7,6 +7,7 @@ import (
 	. "launchpad.net/gocheck"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -58,7 +59,7 @@ func newSingleServingServer(
 			panic(err)
 		}
 		requestContent = string(res)
-		if r.URL.String() != uri {
+		if r.URL.String() != uri || strings.Contains(requestContent, "WRONG") {
 			http.Error(w, "404 page not found", http.StatusNotFound)
 		} else {
 			w.WriteHeader(code)
@@ -109,4 +110,15 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 		panic(err)
 	}
 	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
+}
+
+func (suite *USSOTestSuite) TestGetTokenFails(c *C) {
+	// Simulate an invalid Ubuntu SSO Server response.
+	server := newSingleServingServer("/api/v2/tokens", "{}", 200)
+	var testSSOServer = &UbuntuSSOServer{server.URL}
+	defer server.Close()
+	ssodata, err := testSSOServer.GetToken(email, "WRONG", tokenName)
+	fmt.Println(ssodata, err)
+	c.Assert(err, NotNil)
+	c.Assert(ssodata, IsNil)
 }
