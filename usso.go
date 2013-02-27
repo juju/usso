@@ -17,7 +17,7 @@ type UbuntuSSOServer struct {
 
 // tokenURL returns the URL where the Ubuntu SSO tokens can be requested.
 func (server UbuntuSSOServer) tokenURL() string {
-	return server.baseUrl + "/api/v2/tokens"
+	return server.baseUrl + "/api/v2/tokens/oauth"
 }
 
 // AccountURL returns the URL where the Ubuntu SSO account information can be 
@@ -58,7 +58,7 @@ func (server UbuntuSSOServer) GetToken(
 	if response.StatusCode == 404 {
 		return nil, errors.New("Wrong credentials.")
 	}
-	if response.StatusCode != 200 {
+	if response.StatusCode != 200 && response.StatusCode != 201 {
 		return nil, fmt.Errorf("SSO Error: %s\n", response.Status)
 	}
 	body, err := ioutil.ReadAll(response.Body)

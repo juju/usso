@@ -35,13 +35,13 @@ type SingleServingServer struct {
 // TestProductionUbuntuSSOServerURLs tests the URLs of the production server.
 func (suite *USSOTestSuite) TestProductionUbuntuSSOServerURLs(c *C) {
 	tokenURL := ProductionUbuntuSSOServer.tokenURL()
-	c.Assert(tokenURL, Equals, "https://login.ubuntu.com/api/v2/tokens")
+	c.Assert(tokenURL, Equals, "https://login.ubuntu.com/api/v2/tokens/oauth")
 }
 
 // TestStagingUbuntuSSOServerURLs tests the URLs of the staging server.
 func (suite *USSOTestSuite) TestStagingUbuntuSSOServerURLs(c *C) {
 	tokenURL := StagingUbuntuSSOServer.tokenURL()
-	c.Assert(tokenURL, Equals, "https://login.staging.ubuntu.com/api/v2/tokens")
+	c.Assert(tokenURL, Equals, "https://login.staging.ubuntu.com/api/v2/tokens/oauth")
 }
 
 // newSingleServingServer create a single-serving test http server which will
@@ -87,7 +87,7 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 	if err != nil {
 		panic(err)
 	}
-	server := newSingleServingServer("/api/v2/tokens",
+	server := newSingleServingServer("/api/v2/tokens/oauth",
 		string(jsonServerResponseData), 200)
 	var testSSOServer = &UbuntuSSOServer{server.URL}
 	defer server.Close()
@@ -114,7 +114,7 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 
 // GetToken should return empty credentials and an error, if wrong account is provided.
 func (suite *USSOTestSuite) TestGetTokenFails(c *C) {
-	server := newSingleServingServer("/api/v2/tokens", "{}", 200)
+	server := newSingleServingServer("/api/v2/tokens/oauth", "{}", 200)
 	var testSSOServer = &UbuntuSSOServer{server.URL}
 	defer server.Close()
 	ssodata, err := testSSOServer.GetToken(email, "WRONG", tokenName)
