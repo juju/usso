@@ -20,10 +20,16 @@ func (server UbuntuSSOServer) tokenURL() string {
 	return server.baseUrl + "/api/v2/tokens/oauth"
 }
 
-// AccountURL returns the URL where the Ubuntu SSO account information can be 
+// AccountURL returns the URL where the Ubuntu SSO account information can be
 // requested.
 func (server UbuntuSSOServer) AccountsURL() string {
 	return server.baseUrl + "/api/v2/accounts/"
+}
+
+// TokenDetailURL returns the URL where the Ubuntu SSO token details can be
+// requested.
+func (server UbuntuSSOServer) TokenDetailsURL() string {
+	return server.baseUrl + "/api/v2/tokens/oauth/"
 }
 
 // ProductionUbuntuSSOServer represents the production Ubuntu SSO server
@@ -115,4 +121,33 @@ func GetAuthorizationHeader(
 	ssodata *SSOData, rp *RequestParameters) (string, error) {
 	header, err := ssodata.GetAuthorizationHeader(rp)
 	return header, err
+}
+
+// Returns all the Ubuntu SSO information related to this token.
+func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) {
+	rp := RequestParameters{
+		BaseURL:         server.TokenDetailsURL() + ssodata.TokenKey,
+		HTTPMethod:      "GET",
+		SignatureMethod: HMACSHA1{}}
+
+	request, err := http.NewRequest(rp.HTTPMethod, rp.BaseURL, nil)
+	if err != nil {
+		return "", err
+	}
+	err = SignRequest(ssodata, &rp, request)
+	if err != nil {
+		return "", err
+	}
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+	}
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	var b bytes.Buffer
+	b.Write(body)
+	return fmt.Sprint(b.String()), nil
 }
