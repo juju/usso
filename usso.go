@@ -153,7 +153,7 @@ func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) 
 	return fmt.Sprint(b.String()), nil
 }
 
-//
+// Register the toke to the U1 File Sync Service.
 func (server UbuntuSSOServer) RegisterTokenToU1FileSync(ssodata *SSOData) (err error) {
 	rp := RequestParameters{
 		BaseURL:         "https://one.ubuntu.com/oauth/sso-finished-so-get-tokens/",
