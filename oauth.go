@@ -31,6 +31,7 @@ func nonce() string {
 type SSOData struct {
 	ConsumerKey    string `json:"consumer_key"`
 	ConsumerSecret string `json:"consumer_secret"`
+	Realm          string `json:"realm"`
 	TokenKey       string `json:"token_key"`
 	TokenName      string `json:"token_name"`
 	TokenSecret    string `json:"token_secret"`
@@ -53,7 +54,7 @@ type SignatureMethod interface {
 
 type PLAINTEXT struct{}
 
-// Return the name of the signature method, used to compose the 
+// Return the name of the signature method, used to compose the
 // Authentication Header.
 func (PLAINTEXT) Name() string { return "PLAINTEXT" }
 
@@ -68,7 +69,7 @@ func (PLAINTEXT) Signature(
 
 type HMACSHA1 struct{}
 
-// Return the name of the signature method, used to compose the 
+// Return the name of the signature method, used to compose the
 // Authentication Header.
 func (HMACSHA1) Name() string { return "HMAC-SHA1" }
 
@@ -118,7 +119,7 @@ func (ssodata *SSOData) GetAuthorizationHeader(
 		return "", err
 	}
 	auth := fmt.Sprintf(
-		`OAuth realm="API", `+
+		`OAuth realm="%s", `+
 			`oauth_consumer_key="%s", `+
 			`oauth_token="%s", `+
 			`oauth_signature_method="%s", `+
@@ -126,6 +127,7 @@ func (ssodata *SSOData) GetAuthorizationHeader(
 			`oauth_timestamp="%s", `+
 			`oauth_nonce="%s", `+
 			`oauth_version="1.0"`,
+		url.QueryEscape(ssodata.Realm),
 		url.QueryEscape(ssodata.ConsumerKey),
 		url.QueryEscape(ssodata.TokenKey),
 		rp.SignatureMethod.Name(),

@@ -21,6 +21,7 @@ const (
 	tokenName      = "foo"
 	tokenKey       = "abcs"
 	tokenSecret    = "mTBgLxtTRUdfqewqgrqsvxlijbMWkPBajgKcoZCrDwv"
+	realm          = "API"
 	consumerKey    = "rfyzhdQ"
 	consumerSecret = "rwDkQkkdfdfdeAslkmmxAOjOAT"
 	email          = "foo@bar.com"
@@ -96,7 +97,7 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 	ssodata, err := testSSOServer.GetToken(email, password, tokenName)
 	c.Assert(err, IsNil)
 	expectedSSOData := &SSOData{ConsumerKey: consumerKey,
-		ConsumerSecret: consumerSecret, TokenKey: tokenKey,
+		ConsumerSecret: consumerSecret, Realm: realm, TokenKey: tokenKey,
 		TokenSecret: tokenSecret, TokenName: tokenName}
 	c.Assert(ssodata, DeepEquals, expectedSSOData)
 	// The request that the fake Ubuntu SSO Server has the credentials.

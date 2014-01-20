@@ -17,7 +17,7 @@ var _ = Suite(&OAuthTestSuite{})
 func (suite *OAuthTestSuite) SetUpTest(c *C) {
 	baseUrl := "https://localhost"
 	suite.ssodata = SSOData{ConsumerKey: consumerKey,
-		ConsumerSecret: consumerSecret, TokenKey: tokenKey,
+		ConsumerSecret: consumerSecret, Realm: realm, TokenKey: tokenKey,
 		TokenName: tokenName, TokenSecret: tokenSecret}
 	suite.rp = RequestParameters{BaseURL: baseUrl, HTTPMethod: "GET",
 		Nonce: "10888885", Timestamp: "1358853126"}

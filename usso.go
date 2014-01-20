@@ -78,6 +78,7 @@ func (server UbuntuSSOServer) GetToken(
 		log.Println(err)
 		return nil, err
 	}
+	ssodata.Realm = "API"
 	return &ssodata, nil
 }
 
@@ -150,4 +151,37 @@ func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) 
 	var b bytes.Buffer
 	b.Write(body)
 	return fmt.Sprint(b.String()), nil
+}
+
+//
+func (server UbuntuSSOServer) RegisterTokenToU1FileSync(ssodata *SSOData) (err error) {
+	rp := RequestParameters{
+		BaseURL:         "https://one.ubuntu.com/oauth/sso-finished-so-get-tokens/",
+		HTTPMethod:      "GET",
+		SignatureMethod: HMACSHA1{}}
+
+	request, err := http.NewRequest(rp.HTTPMethod, rp.BaseURL, nil)
+	if err != nil {
+		return err
+	}
+	ssodata.Realm = ""
+	err = SignRequest(ssodata, &rp, request)
+	if err != nil {
+		return err
+	}
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+	}
+	if response.StatusCode != 200 {
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			fmt.Println(err)
+		}
+		var b bytes.Buffer
+		b.Write(body)
+		errors.New(fmt.Sprint(b.String()))
+	}
+	return nil
 }
