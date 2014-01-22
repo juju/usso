@@ -66,6 +66,9 @@ func main() {
 	fmt.Printf("response: %+v\n", b.String())
 	token_details, _ := server.GetTokenDetails(ssodata)
 	fmt.Printf("token details: %s\n", token_details)
-	token_u1registration, _ := server.RegisterTokenToU1FileSync(ssodata)
-	fmt.Printf("token registration: %s\n", token_u1registration)
+	err = server.RegisterTokenToU1FileSync(ssodata)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+	}
+	fmt.Println("Token successfully registered to U1 File Sync Service.")
 }

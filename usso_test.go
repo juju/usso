@@ -28,11 +28,6 @@ const (
 	password       = "foobarpwd"
 )
 
-type SingleServingServer struct {
-	*httptest.Server
-	requestContent *string
-}
-
 // TestProductionUbuntuSSOServerURLs tests the URLs of the production server.
 func (suite *USSOTestSuite) TestProductionUbuntuSSOServerURLs(c *C) {
 	tokenURL := ProductionUbuntuSSOServer.tokenURL()
@@ -45,31 +40,47 @@ func (suite *USSOTestSuite) TestStagingUbuntuSSOServerURLs(c *C) {
 	c.Assert(tokenURL, Equals, "https://login.staging.ubuntu.com/api/v2/tokens/oauth")
 }
 
-// newSingleServingServer create a single-serving test http server which will
-// return only one response as defined by the passed arguments.
-func newSingleServingServer(
-	uri string, response string, code int) *SingleServingServer {
+type TestServer struct {
+	*httptest.Server
+	requestContent *string
+}
+
+// newTestServer http server to mock U1 SSO server.
+func newTestServer(response, tokenDetails string, code int) *TestServer {
 	var requestContent string
-	var requested bool
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		if requested {
-			http.Error(w, "Already requested", http.StatusServiceUnavailable)
-		}
 		res, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			panic(err)
 		}
-		requestContent = string(res)
-		if r.URL.String() != uri || strings.Contains(requestContent, "WRONG") {
+		if strings.Contains(string(res), "WRONG") {
 			http.Error(w, "404 page not found", http.StatusNotFound)
-		} else {
-			w.WriteHeader(code)
-			fmt.Fprint(w, response)
 		}
-		requested = true
+		if r.URL.String() == "/api/v2/tokens/oauth" {
+			requestContent = string(res)
+			fmt.Fprint(w, response)
+			return
+		}
+		if r.URL.String() == "/api/v2/tokens/oauth/abcs" {
+			fmt.Fprint(w, tokenDetails)
+			return
+		}
+		if r.URL.String() == "/oauth/sso-finished-so-get-tokens/" {
+			fmt.Fprint(w, "ok")
+
+			concat := ""
+			for _, v := range r.Header["Authorization"] {
+				concat += v
+			}
+			requestContent = concat
+			return
+		} else {
+			http.Error(w, "404 page not found", http.StatusNotFound)
+			return
+		}
 	}
 	server := httptest.NewServer(http.HandlerFunc(handler))
-	return &SingleServingServer{server, &requestContent}
+	return &TestServer{server, &requestContent}
 }
 
 func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
@@ -88,9 +99,8 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 	if err != nil {
 		panic(err)
 	}
-	server := newSingleServingServer("/api/v2/tokens/oauth",
-		string(jsonServerResponseData), 200)
-	var testSSOServer = &UbuntuSSOServer{server.URL}
+	server := newTestServer(string(jsonServerResponseData), "{}", 200)
+	var testSSOServer = &UbuntuSSOServer{server.URL, ""}
 	defer server.Close()
 
 	// The returned information is correct.
@@ -115,11 +125,10 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 
 // GetToken should return empty credentials and an error, if wrong account is provided.
 func (suite *USSOTestSuite) TestGetTokenFails(c *C) {
-	server := newSingleServingServer("/api/v2/tokens/oauth", "{}", 200)
-	var testSSOServer = &UbuntuSSOServer{server.URL}
+	server := newTestServer("{}", "{}", 200)
+	var testSSOServer = &UbuntuSSOServer{server.URL, ""}
 	defer server.Close()
 	ssodata, err := testSSOServer.GetToken(email, "WRONG", tokenName)
-	fmt.Println(ssodata, err)
 	c.Assert(err, NotNil)
 	c.Assert(ssodata, IsNil)
 }
@@ -138,16 +147,53 @@ func (suite *USSOTestSuite) TestGetTokenDetails(c *C) {
 	if err != nil {
 		panic(err)
 	}
-	server := newSingleServingServer("/api/v2/tokens/oauth",
-		string(jsonServerResponseData), 200)
-	var testSSOServer = &UbuntuSSOServer{server.URL}
+	tokenDetails := map[string]string{
+		"token_name":   tokenName,
+		"date_updated": "2014-01-22T13:35:49.867",
+		"token_key":    tokenKey,
+		"href":         "/api/v2/tokens/oauth/JckChNpbXxPRmPkElLglSnqnjsnGseWJmNqTJCWfUtNBSsGtoG",
+		"date_created": "2014-01-17T20:03:24.993",
+		"consumer_key": consumerKey,
+	}
+	jsonTokenDetails, err := json.Marshal(tokenDetails)
+	if err != nil {
+		panic(err)
+	}
+	server := newTestServer(string(jsonServerResponseData), string(jsonTokenDetails), 200)
+	var testSSOServer = &UbuntuSSOServer{server.URL, ""}
 	defer server.Close()
 	ssodata, err := testSSOServer.GetToken(email, password, tokenName)
-
 	// The returned information is correct.
 	token_details, err := testSSOServer.GetTokenDetails(ssodata)
 	c.Assert(err, IsNil)
-
 	//The request that the fake Ubuntu SSO Server has the token details.
-	fmt.Printf("%s\n", token_details)
+	c.Assert(token_details, Equals, string(jsonTokenDetails))
+}
+
+func (suite *USSOTestSuite) TestRegisterToken(c *C) {
+	// Simulate a valid Ubuntu SSO Server response.
+	serverResponseData := map[string]string{
+		"date_updated": "2013-01-16 14:03:36",
+		"date_created": "2013-01-16 14:03:36",
+		"href":         "/api/v2/tokens/" + tokenKey,
+		"token_name":   tokenName,
+		"token_key":    tokenKey,
+		"consumer_key": consumerKey,
+	}
+	jsonServerResponseData, err := json.Marshal(serverResponseData)
+	if err != nil {
+		panic(err)
+	}
+	server := newTestServer(string(jsonServerResponseData), "{}", 200)
+	var testSSOServer = &UbuntuSSOServer{server.URL, server.URL + "/oauth/sso-finished-so-get-tokens/"}
+	defer server.Close()
+	ssodata, err := testSSOServer.GetToken(email, password, tokenName)
+	err = testSSOServer.RegisterTokenToU1FileSync(ssodata)
+	c.Assert(err, IsNil)
+	c.Assert(true, Equals, strings.Contains(*server.requestContent, "oauth_consumer_key=\"rfyzhdQ\""))
+	c.Assert(true, Equals, strings.Contains(*server.requestContent, "oauth_token=\"abcs\""))
+	c.Assert(true, Equals, strings.Contains(*server.requestContent, "oauth_signature_method=\"HMAC-SHA1\""))
+	c.Assert(true, Equals, strings.Contains(*server.requestContent, "oauth_version=\"1.0\""))
+	c.Assert(true, Equals, strings.Contains(*server.requestContent, ""))
+
 }

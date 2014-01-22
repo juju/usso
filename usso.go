@@ -12,7 +12,8 @@ import (
 )
 
 type UbuntuSSOServer struct {
-	baseUrl string
+	baseUrl              string
+	tokenRegistrationUrl string
 }
 
 // tokenURL returns the URL where the Ubuntu SSO tokens can be requested.
@@ -34,16 +35,15 @@ func (server UbuntuSSOServer) TokenDetailsURL() string {
 
 // ProductionUbuntuSSOServer represents the production Ubuntu SSO server
 // located at https://login.ubuntu.com.
-var ProductionUbuntuSSOServer = UbuntuSSOServer{"https://login.ubuntu.com"}
+var ProductionUbuntuSSOServer = UbuntuSSOServer{"https://login.ubuntu.com", "https://one.ubuntu.com/oauth/sso-finished-so-get-tokens/"}
 
 // StagingUbuntuSSOServer represents the staging Ubuntu SSO server located
 // at https://login.staging.ubuntu.com. Use it for testing.
-var StagingUbuntuSSOServer = UbuntuSSOServer{"https://login.staging.ubuntu.com"}
+var StagingUbuntuSSOServer = UbuntuSSOServer{"https://login.staging.ubuntu.com", "https://one.staging.ubuntu.com/oauth/sso-finished-so-get-tokens/"}
 
 // Giving user credentials and token name, retrieves oauth credentials
 // for the users, the oauth credentials can be used later to sign requests.
-func (server UbuntuSSOServer) GetToken(
-	email string, password string, tokenName string) (*SSOData, error) {
+func (server UbuntuSSOServer) GetToken(email string, password string, tokenName string) (*SSOData, error) {
 	credentials := map[string]string{
 		"email":      email,
 		"password":   password,
@@ -156,7 +156,7 @@ func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) 
 // Register the toke to the U1 File Sync Service.
 func (server UbuntuSSOServer) RegisterTokenToU1FileSync(ssodata *SSOData) (err error) {
 	rp := RequestParameters{
-		BaseURL:         "https://one.ubuntu.com/oauth/sso-finished-so-get-tokens/",
+		BaseURL:         server.tokenRegistrationUrl,
 		HTTPMethod:      "GET",
 		SignatureMethod: HMACSHA1{}}
 
