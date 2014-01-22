@@ -25,8 +25,8 @@ func main() {
 	inputParams()
 	// Fetch the tokens using usso.GetToken.
 	fmt.Println("Fetching tokens from staging server...")
-	server := usso.StagingUbuntuSSOServer
-	ssodata, err := server.GetToken(email, password, "usso")
+	server := usso.ProductionUbuntuSSOServer
+	ssodata, err := server.GetToken(email, password, "Ubuntu One @ test-duplicity")
 	if err != nil {
 		panic(err)
 	}
@@ -66,4 +66,6 @@ func main() {
 	fmt.Printf("response: %+v\n", b.String())
 	token_details, _ := server.GetTokenDetails(ssodata)
 	fmt.Printf("token details: %s\n", token_details)
+	token_u1registration, _ := server.RegisterTokenToU1FileSync(ssodata)
+	fmt.Printf("token registration: %s\n", token_u1registration)
 }
