@@ -33,6 +33,11 @@ func (server UbuntuSSOServer) TokenDetailsURL() string {
 	return server.baseUrl + "/api/v2/tokens/oauth/"
 }
 
+// LoginURL returns the url for Openid login
+func (server UbuntuSSOServer) LoginURL() string {
+	return server.baseUrl
+}
+
 // ProductionUbuntuSSOServer represents the production Ubuntu SSO server
 // located at https://login.ubuntu.com.
 var ProductionUbuntuSSOServer = UbuntuSSOServer{"https://login.ubuntu.com", "https://one.ubuntu.com/oauth/sso-finished-so-get-tokens/"}
