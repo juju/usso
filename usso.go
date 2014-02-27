@@ -68,7 +68,7 @@ func (server UbuntuSSOServer) GetToken(email string, password string, tokenName 
 		return nil, errors.New("Wrong credentials.")
 	}
 	if response.StatusCode != 200 && response.StatusCode != 201 {
-		return nil, fmt.Errorf("SSO Error: %s\n", response.Status)
+		return nil, errors.New(fmt.Sprintf("SSO Error: %s\n", response.Status))
 	}
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -104,16 +104,26 @@ func (server UbuntuSSOServer) GetAccounts(ssodata *SSOData) (string, error) {
 		return "", err
 	}
 
-	//FIXME check the status code of the response
-	//      if it's not 200 or 201 return a custom error
-
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return "", err
 	}
-	var b bytes.Buffer
-	b.Write(body)
-	return fmt.Sprint(b.String()), nil
+	if response.StatusCode == 200 {
+		return string(body), nil
+	} else {
+		var jsonBuffer interface{}
+		err = json.Unmarshal(body, &jsonBuffer)
+		// In theory, this should never happen.
+		if err != nil {
+			return "", errors.New("NO_JSON_RESPONSE")
+		}
+		jsonMap := jsonBuffer.(map[string]interface{})
+		code, ok := jsonMap["code"]
+		if !ok {
+			return "", errors.New("NO_CODE")
+		}
+		return "", errors.New(code.(string))
+	}
 }
 
 // Given oauth credentials and a request, return it signed.
@@ -153,8 +163,6 @@ func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	var b bytes.Buffer
-	b.Write(body)
 	if response.StatusCode == 200 {
 		return string(body), nil
 	} else {
@@ -171,7 +179,6 @@ func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) 
 		}
 		return "", errors.New(code.(string))
 	}
-	return string(body), nil
 }
 
 // Register the toke to the U1 File Sync Service.
@@ -202,7 +209,7 @@ func (server UbuntuSSOServer) RegisterTokenToU1FileSync(ssodata *SSOData) (err e
 		}
 		var b bytes.Buffer
 		b.Write(body)
-		errors.New(fmt.Sprint(b.String()))
+		errors.New(b.String())
 	}
 	return nil
 }
