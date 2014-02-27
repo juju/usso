@@ -2,7 +2,6 @@ package usso
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -64,10 +63,10 @@ func (server UbuntuSSOServer) GetToken(email string, password string, tokenName 
 		return nil, err
 	}
 	if response.StatusCode == 404 {
-		return nil, errors.New("Wrong credentials.")
+		return nil, fmt.Errorf("Wrong credentials.")
 	}
 	if response.StatusCode != 200 && response.StatusCode != 201 {
-		return nil, errors.New(fmt.Sprintf("SSO Error: %s\n", response.Status))
+		return nil, fmt.Errorf("SSO Error: %s\n", response.Status)
 	}
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -114,11 +113,11 @@ func (server UbuntuSSOServer) GetAccounts(ssodata *SSOData) (string, error) {
 		err = json.Unmarshal(body, &jsonMap)
 		// In theory, this should never happen.
 		if err != nil {
-			return "", errors.New("NO_JSON_RESPONSE")
+			return "", fmt.Errorf("NO_JSON_RESPONSE")
 		}
 		code, ok := jsonMap["code"]
 		if !ok {
-			return "", errors.New("NO_CODE")
+			return "", fmt.Errorf("NO_CODE")
 		}
 		return "", fmt.Errorf("%v", code)
 	}
@@ -168,11 +167,11 @@ func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) 
 		err = json.Unmarshal(body, &jsonMap)
 		// due to bug #1285176, it is possible to get non json code in the response.
 		if err != nil {
-			return "", errors.New("INVALID_CREDENTIALS")
+			return "", fmt.Errorf("INVALID_CREDENTIALS")
 		}
 		code, ok := jsonMap["code"]
 		if !ok {
-			return "", errors.New("NO_CODE")
+			return "", fmt.Errorf("NO_CODE")
 		}
 		return "", fmt.Errorf("%v", code)
 	}
