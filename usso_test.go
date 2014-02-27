@@ -159,3 +159,53 @@ func (suite *USSOTestSuite) TestGetTokenDetails(c *C) {
 	//The request that the fake Ubuntu SSO Server has the token details.
 	c.Assert(token_details, Equals, string(jsonTokenDetails))
 }
+
+func (suite *USSOTestSuite) TestTokenValidity(c *C) {
+	// Simulate a valid Ubuntu SSO Server response.
+	serverResponseData := map[string]string{
+		"date_updated": "2013-01-16 14:03:36",
+		"date_created": "2013-01-16 14:03:36",
+		"href":         "/api/v2/tokens/" + tokenKey,
+		"token_name":   tokenName,
+		"token_key":    tokenKey,
+		"consumer_key": consumerKey,
+	}
+	jsonServerResponseData, err := json.Marshal(serverResponseData)
+	if err != nil {
+		panic(err)
+	}
+	tokenDetails := map[string]string{
+		"token_name":   tokenName,
+		"date_updated": "2014-01-22T13:35:49.867",
+		"token_key":    tokenKey,
+		"href":         "/api/v2/tokens/oauth/JckChNpbXxPRmPkElLglSnqnjsnGseWJmNqTJCWfUtNBSsGtoG",
+		"date_created": "2014-01-17T20:03:24.993",
+		"consumer_key": consumerKey,
+	}
+	jsonTokenDetails, err := json.Marshal(tokenDetails)
+	if err != nil {
+		panic(err)
+	}
+	server := newTestServer(string(jsonServerResponseData), string(jsonTokenDetails), 200)
+	var testSSOServer = &UbuntuSSOServer{server.URL, ""}
+	defer server.Close()
+	ssodata, err := testSSOServer.GetToken(email, password, tokenName)
+	// The returned information is correct.
+	token_details, err := testSSOServer.GetTokenDetails(ssodata)
+	c.Assert(err, IsNil)
+	//The request that the fake Ubuntu SSO Server has the token details.
+	c.Assert(token_details, Equals, string(jsonTokenDetails))
+	validity, err := testSSOServer.IsTokenValid(ssodata)
+	c.Assert(validity, Equals, true)
+}
+
+// Check invalid token
+func (suite *USSOTestSuite) TestInvalidToken(c *C) {
+	server := newTestServer("{}", "{}", 200)
+	var testSSOServer = &UbuntuSSOServer{server.URL, ""}
+	defer server.Close()
+	ssodata := SSOData{"WRONG", "", "", "", "", ""}
+	validity, err := testSSOServer.IsTokenValid(&ssodata)
+	c.Assert(err, NotNil)
+	c.Assert(validity, Equals, false)
+}
