@@ -1,7 +1,6 @@
 package usso
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"

@@ -169,31 +169,3 @@ func (suite *USSOTestSuite) TestGetTokenDetails(c *C) {
 	//The request that the fake Ubuntu SSO Server has the token details.
 	c.Assert(token_details, Equals, string(jsonTokenDetails))
 }
-
-func (suite *USSOTestSuite) TestRegisterToken(c *C) {
-	// Simulate a valid Ubuntu SSO Server response.
-	serverResponseData := map[string]string{
-		"date_updated": "2013-01-16 14:03:36",
-		"date_created": "2013-01-16 14:03:36",
-		"href":         "/api/v2/tokens/" + tokenKey,
-		"token_name":   tokenName,
-		"token_key":    tokenKey,
-		"consumer_key": consumerKey,
-	}
-	jsonServerResponseData, err := json.Marshal(serverResponseData)
-	if err != nil {
-		panic(err)
-	}
-	server := newTestServer(string(jsonServerResponseData), "{}", 200)
-	var testSSOServer = &UbuntuSSOServer{server.URL, server.URL + "/oauth/sso-finished-so-get-tokens/"}
-	defer server.Close()
-	ssodata, err := testSSOServer.GetToken(email, password, tokenName)
-	err = testSSOServer.RegisterTokenToU1FileSync(ssodata)
-	c.Assert(err, IsNil)
-	c.Assert(true, Equals, strings.Contains(*server.requestContent, "oauth_consumer_key=\"rfyzhdQ\""))
-	c.Assert(true, Equals, strings.Contains(*server.requestContent, "oauth_token=\"abcs\""))
-	c.Assert(true, Equals, strings.Contains(*server.requestContent, "oauth_signature_method=\"HMAC-SHA1\""))
-	c.Assert(true, Equals, strings.Contains(*server.requestContent, "oauth_version=\"1.0\""))
-	c.Assert(true, Equals, strings.Contains(*server.requestContent, ""))
-
-}
