@@ -179,3 +179,15 @@ func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) 
 		return "", errors.New(code.(string))
 	}
 }
+
+// Verify the validity of the token, abusing the API to get the token details.
+func (server UbuntuSSOServer) IsTokenValid(ssodata *SSOData) (bool, error) {
+	details, err := server.GetTokenDetails(ssodata)
+	fmt.Printf("%#+v\n", details)
+	fmt.Printf("%#+v\n", err)
+	if details != "" && err != nil {
+		return true, nil
+	} else {
+		return false, err
+	}
+}
