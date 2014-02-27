@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -56,7 +55,6 @@ func (server UbuntuSSOServer) GetToken(email string, password string, tokenName 
 	}
 	jsonCredentials, err := json.Marshal(credentials)
 	if err != nil {
-		log.Printf("Error: %s\n", err)
 		return nil, err
 	}
 	response, err := http.Post(
@@ -74,13 +72,11 @@ func (server UbuntuSSOServer) GetToken(email string, password string, tokenName 
 	}
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	ssodata := SSOData{}
 	err = json.Unmarshal(body, &ssodata)
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	ssodata.Realm = "API"
@@ -105,11 +101,15 @@ func (server UbuntuSSOServer) GetAccounts(ssodata *SSOData) (string, error) {
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
+		return "", err
 	}
+
+	//FIXME check the status code of the response
+	//      if it's not 200 or 201 return a custom error
+
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		fmt.Println(err)
+		return "", err
 	}
 	var b bytes.Buffer
 	b.Write(body)
@@ -147,15 +147,31 @@ func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) 
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
+		return "", err
 	}
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		fmt.Println(err)
+		return "", err
 	}
 	var b bytes.Buffer
 	b.Write(body)
-	return fmt.Sprint(b.String()), nil
+	if response.StatusCode == 200 {
+		return string(body), nil
+	} else {
+		var jsonBuffer interface{}
+		err = json.Unmarshal(body, &jsonBuffer)
+		// due to bug #1285176, it is possible to get non json code in the response.
+		if err != nil {
+			return "", errors.New("INVALID_CREDENTIALS")
+		}
+		jsonMap := jsonBuffer.(map[string]interface{})
+		code, ok := jsonMap["code"]
+		if !ok {
+			return "", errors.New("NO_CODE")
+		}
+		return "", errors.New(code.(string))
+	}
+	return string(body), nil
 }
 
 // Register the toke to the U1 File Sync Service.
@@ -177,12 +193,12 @@ func (server UbuntuSSOServer) RegisterTokenToU1FileSync(ssodata *SSOData) (err e
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
+		return err
 	}
 	if response.StatusCode != 200 {
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			fmt.Println(err)
+			return err
 		}
 		var b bytes.Buffer
 		b.Write(body)
