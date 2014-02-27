@@ -64,16 +64,6 @@ func newTestServer(response, tokenDetails string, code int) *TestServer {
 		if r.URL.String() == "/api/v2/tokens/oauth/abcs" {
 			fmt.Fprint(w, tokenDetails)
 			return
-		}
-		if r.URL.String() == "/oauth/sso-finished-so-get-tokens/" {
-			fmt.Fprint(w, "ok")
-
-			concat := ""
-			for _, v := range r.Header["Authorization"] {
-				concat += v
-			}
-			requestContent = concat
-			return
 		} else {
 			http.Error(w, "404 page not found", http.StatusNotFound)
 			return
