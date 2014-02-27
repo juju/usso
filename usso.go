@@ -110,18 +110,17 @@ func (server UbuntuSSOServer) GetAccounts(ssodata *SSOData) (string, error) {
 	if response.StatusCode == 200 {
 		return string(body), nil
 	} else {
-		var jsonBuffer interface{}
-		err = json.Unmarshal(body, &jsonBuffer)
+		var jsonMap map[string]interface{}
+		err = json.Unmarshal(body, &jsonMap)
 		// In theory, this should never happen.
 		if err != nil {
 			return "", errors.New("NO_JSON_RESPONSE")
 		}
-		jsonMap := jsonBuffer.(map[string]interface{})
 		code, ok := jsonMap["code"]
 		if !ok {
 			return "", errors.New("NO_CODE")
 		}
-		return "", errors.New(code.(string))
+		return "", fmt.Errorf("%v", code)
 	}
 }
 
@@ -165,18 +164,17 @@ func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) 
 	if response.StatusCode == 200 {
 		return string(body), nil
 	} else {
-		var jsonBuffer interface{}
-		err = json.Unmarshal(body, &jsonBuffer)
+		var jsonMap map[string]interface{}
+		err = json.Unmarshal(body, &jsonMap)
 		// due to bug #1285176, it is possible to get non json code in the response.
 		if err != nil {
 			return "", errors.New("INVALID_CREDENTIALS")
 		}
-		jsonMap := jsonBuffer.(map[string]interface{})
 		code, ok := jsonMap["code"]
 		if !ok {
 			return "", errors.New("NO_CODE")
 		}
-		return "", errors.New(code.(string))
+		return "", fmt.Errorf("%v", code)
 	}
 }
 
