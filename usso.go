@@ -180,36 +180,3 @@ func (server UbuntuSSOServer) GetTokenDetails(ssodata *SSOData) (string, error) 
 		return "", errors.New(code.(string))
 	}
 }
-
-// Register the toke to the U1 File Sync Service.
-func (server UbuntuSSOServer) RegisterTokenToU1FileSync(ssodata *SSOData) (err error) {
-	rp := RequestParameters{
-		BaseURL:         server.tokenRegistrationUrl,
-		HTTPMethod:      "GET",
-		SignatureMethod: HMACSHA1{}}
-
-	request, err := http.NewRequest(rp.HTTPMethod, rp.BaseURL, nil)
-	if err != nil {
-		return err
-	}
-	ssodata.Realm = ""
-	err = SignRequest(ssodata, &rp, request)
-	if err != nil {
-		return err
-	}
-	client := &http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
-		return err
-	}
-	if response.StatusCode != 200 {
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			return err
-		}
-		var b bytes.Buffer
-		b.Write(body)
-		errors.New(b.String())
-	}
-	return nil
-}
