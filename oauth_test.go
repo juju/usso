@@ -65,3 +65,27 @@ func (suite *OAuthTestSuite) TestSignRequestSHA1(c *C) {
 	c.Assert(authHeader, Matches,
 		`.*oauth_signature="`+"amJnYeek4G9ObTgTiE2y6cwTyPg="+`.*`)
 }
+
+func (suite *OAuthTestSuite) TestSignRequestSHA1WithParams(c *C) {
+	rp := suite.rp
+	rp.SignatureMethod = HMACSHA1{}
+	rp.Params = url.Values{
+		"a": []string{"B", "A"},
+		"z": []string{""},
+	}
+	err := suite.ssodata.SignRequest(&rp, suite.request)
+	if err != nil {
+		c.Log(err)
+		c.FailNow()
+	}
+	authHeader := suite.request.Header["Authorization"][0]
+	c.Assert(authHeader, Matches, `^OAuth.*`)
+	c.Assert(authHeader, Matches, `.*realm="API".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_consumer_key="`+url.QueryEscape(
+			suite.ssodata.ConsumerKey)+`".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_token="`+url.QueryEscape(suite.ssodata.TokenKey)+`".*`)
+	c.Assert(authHeader, Matches,
+		`.*oauth_signature="`+"a/PwZ4HMX0FptNA4KRFl1jIqlOg="+`.*`)
+}
