@@ -26,6 +26,7 @@ const (
 	consumerSecret = "rwDkQkkdfdfdeAslkmmxAOjOAT"
 	email          = "foo@bar.com"
 	password       = "foobarpwd"
+	otp            = "000000"
 )
 
 // TestProductionUbuntuSSOServerURLs tests the URLs of the production server.
@@ -158,6 +159,45 @@ func (suite *USSOTestSuite) TestGetTokenDetails(c *C) {
 	c.Assert(err, IsNil)
 	//The request that the fake Ubuntu SSO Server has the token details.
 	c.Assert(token_details, Equals, string(jsonTokenDetails))
+}
+
+func (suite *USSOTestSuite) TestGetTokenWithOTP(c *C) {
+	// Simulate a valid Ubuntu SSO Server response.
+	serverResponseData := map[string]string{
+		"date_updated":    "2013-01-16 14:03:36",
+		"date_created":    "2013-01-16 14:03:36",
+		"href":            "/api/v2/tokens/" + tokenKey,
+		"token_name":      tokenName,
+		"token_key":       tokenKey,
+		"token_secret":    tokenSecret,
+		"consumer_key":    consumerKey,
+		"consumer_secret": consumerSecret,
+	}
+	jsonServerResponseData, err := json.Marshal(serverResponseData)
+	if err != nil {
+		panic(err)
+	}
+	server := newTestServer(string(jsonServerResponseData), "{}", 200)
+	var testSSOServer = &UbuntuSSOServer{server.URL, ""}
+	defer server.Close()
+
+	// The returned information is correct.
+	ssodata, err := testSSOServer.GetTokenWithOTP(email, password, otp, tokenName)
+	c.Assert(err, IsNil)
+	expectedSSOData := &SSOData{ConsumerKey: consumerKey,
+		ConsumerSecret: consumerSecret, Realm: realm, TokenKey: tokenKey,
+		TokenSecret: tokenSecret, TokenName: tokenName}
+	c.Assert(ssodata, DeepEquals, expectedSSOData)
+	// The request that the fake Ubuntu SSO Server has the credentials.
+	credentials := map[string]string{
+		"email":      email,
+		"password":   password,
+		"token_name": tokenName,
+		"otp":        otp,
+	}
+	expectedRequestContent, err := json.Marshal(credentials)
+	c.Assert(err, IsNil)
+	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
 }
 
 func (suite *USSOTestSuite) TestTokenValidity(c *C) {

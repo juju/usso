@@ -46,10 +46,21 @@ var StagingUbuntuSSOServer = UbuntuSSOServer{"https://login.staging.ubuntu.com",
 // Giving user credentials and token name, retrieves oauth credentials
 // for the users, the oauth credentials can be used later to sign requests.
 func (server UbuntuSSOServer) GetToken(email string, password string, tokenName string) (*SSOData, error) {
+	return server.GetTokenWithOTP(email, password, "", tokenName)
+}
+
+// GetTokenWithOTP retrieves an oauth token from the Ubuntu SSO server.
+// Using the user credentials including two-factor authentication and the
+// token name, an oauth token is retrieved that can later be used to sign
+// requests. If otp is blank then this is identical to GetToken.
+func (server UbuntuSSOServer) GetTokenWithOTP(email, password, otp, tokenName string) (*SSOData, error) {
 	credentials := map[string]string{
 		"email":      email,
 		"password":   password,
 		"token_name": tokenName,
+	}
+	if otp != "" {
+		credentials["otp"] = otp
 	}
 	jsonCredentials, err := json.Marshal(credentials)
 	if err != nil {
