@@ -80,21 +80,25 @@ func (HMACSHA1) Signature(
 	if err != nil {
 		return "", err
 	}
-	params, err := NormalizeParameters(rp.Params)
+	query := url.Values{}
+	for k, v := range rp.Params {
+		query[k] = v
+	}
+	query.Set("oauth_consumer_key", ssodata.ConsumerKey)
+	query.Set("oauth_nonce", rp.Nonce)
+	query.Set("oauth_signature_method", string(rp.SignatureMethod.Name()))
+	query.Set("oauth_timestamp", rp.Timestamp)
+	query.Set("oauth_token", ssodata.TokenKey)
+	query.Set("oauth_version", "1.0")
+	params, err := NormalizeParameters(query)
 	if err != nil {
 		return "", err
 	}
-	baseString := fmt.Sprintf(`%s&%s&%s%s%s%s%s%s%s`,
+	baseString := fmt.Sprintf("%s&%s&%s",
 		rp.HTTPMethod,
-		url.QueryEscape(baseUrl),
-		url.QueryEscape(params),
-		url.QueryEscape("oauth_consumer_key="+ssodata.ConsumerKey),
-		url.QueryEscape("&oauth_nonce="+rp.Nonce),
-		url.QueryEscape(
-			"&oauth_signature_method="+string(rp.SignatureMethod.Name())),
-		url.QueryEscape("&oauth_timestamp="+rp.Timestamp),
-		url.QueryEscape("&oauth_token="+ssodata.TokenKey),
-		url.QueryEscape("&oauth_version=1.0"))
+		escape(baseUrl),
+		escape(params),
+	)
 	hashfun := hmac.New(sha1.New, []byte(
 		ssodata.ConsumerSecret+"&"+ssodata.TokenSecret))
 	hashfun.Write([]byte(baseString))
