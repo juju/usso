@@ -1,4 +1,5 @@
-// Copyright 2015 Canonical Ltd.  All rights reserved.
+// Copyright 2015 Canonical Ltd.
+// Licensed under the LGPLv3, see LICENSE file for details.
 
 package main
 
