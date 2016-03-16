@@ -33,9 +33,14 @@ func (server UbuntuSSOServer) TokenDetailsURL() string {
 	return server.baseUrl + "/api/v2/tokens/oauth/"
 }
 
-// LoginURL returns the url for Openid login
+// LoginURL returns the URL for the interactive login.
 func (server UbuntuSSOServer) LoginURL() string {
 	return server.baseUrl
+}
+
+// OpenIDURL returns the URL of the OpenID login endpoint.
+func (server UbuntuSSOServer) OpenIDURL() string {
+	return server.baseUrl + "/+openid"
 }
 
 // ProductionUbuntuSSOServer represents the production Ubuntu SSO server
