@@ -4,8 +4,9 @@
 package usso
 
 import (
-	"launchpad.net/gocheck"
 	"net/url"
+
+	gocheck "gopkg.in/check.v1"
 )
 
 // When NormalizeURL() is passed a simple URL, it will make no changes

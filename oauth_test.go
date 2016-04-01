@@ -4,9 +4,10 @@
 package usso
 
 import (
-	. "launchpad.net/gocheck"
 	"net/http"
 	"net/url"
+
+	. "gopkg.in/check.v1"
 )
 
 type OAuthTestSuite struct {
