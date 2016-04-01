@@ -6,12 +6,14 @@ package usso
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
-	. "launchpad.net/gocheck"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	. "gopkg.in/check.v1"
 )
 
 func Test(test *testing.T) { TestingT(test) }
@@ -251,4 +253,58 @@ func (suite *USSOTestSuite) TestInvalidToken(c *C) {
 	validity, err := testSSOServer.IsTokenValid(&ssodata)
 	c.Assert(err, NotNil)
 	c.Assert(validity, Equals, false)
+}
+
+var getErrorTests = []struct {
+	about       string
+	status      string
+	body        io.Reader
+	expectCode  string
+	expectError string
+}{{
+	about:       "valid error",
+	body:        strings.NewReader(`{"message": "test error"}`),
+	expectError: `test error`,
+}, {
+	about:       "valid error with code",
+	body:        strings.NewReader(`{"message": "test error", "code": "ERROR"}`),
+	expectCode:  "ERROR",
+	expectError: `test error`,
+}, {
+	about:       "valid error with extra",
+	body:        strings.NewReader(`{"message": "test error", "extra": {"ext": "thing"}}`),
+	expectError: `test error \(ext: thing\)`,
+}, {
+	about:       "bad json",
+	status:      "500 Internal Server Error",
+	body:        strings.NewReader(`{"message": "test error"`),
+	expectCode:  "500 Internal Server Error",
+	expectError: `{"message": "test error"`,
+}, {
+	about:       "bad reader",
+	status:      "500 Internal Server Error",
+	body:        errorReader{fmt.Errorf("test read error")},
+	expectCode:  "500 Internal Server Error",
+	expectError: `500 Internal Server Error`,
+}}
+
+func (suite *USSOTestSuite) TestGetError(c *C) {
+	for i, test := range getErrorTests {
+		c.Logf("%d. %s", i, test.about)
+		resp := &http.Response{
+			Status: test.status,
+			Body:   ioutil.NopCloser(test.body),
+		}
+		err := getError(resp)
+		c.Assert(err.Code, Equals, test.expectCode)
+		c.Assert(err, ErrorMatches, test.expectError)
+	}
+}
+
+type errorReader struct {
+	Err error
+}
+
+func (r errorReader) Read(b []byte) (int, error) {
+	return 0, r.Err
 }

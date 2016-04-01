@@ -47,7 +47,9 @@ var ProductionUbuntuSSOServer = UbuntuSSOServer{"https://login.ubuntu.com", "htt
 var StagingUbuntuSSOServer = UbuntuSSOServer{"https://login.staging.ubuntu.com", "https://one.staging.ubuntu.com/oauth/sso-finished-so-get-tokens/"}
 
 // Giving user credentials and token name, retrieves oauth credentials
-// for the users, the oauth credentials can be used later to sign requests.
+// for the users, the oauth credentials can be used later to sign
+// requests. If an error is returned from the identity server then it
+// will be of type *Error.
 func (server UbuntuSSOServer) GetToken(email string, password string, tokenName string) (*SSOData, error) {
 	return server.GetTokenWithOTP(email, password, "", tokenName)
 }
@@ -55,7 +57,9 @@ func (server UbuntuSSOServer) GetToken(email string, password string, tokenName 
 // GetTokenWithOTP retrieves an oauth token from the Ubuntu SSO server.
 // Using the user credentials including two-factor authentication and the
 // token name, an oauth token is retrieved that can later be used to sign
-// requests. If otp is blank then this is identical to GetToken.
+// requests. If an error is returned from the identity server then it
+// will be of type *Error. If otp is blank then this is identical to
+// GetToken.
 func (server UbuntuSSOServer) GetTokenWithOTP(email, password, otp, tokenName string) (*SSOData, error) {
 	credentials := map[string]string{
 		"email":      email,
@@ -76,23 +80,60 @@ func (server UbuntuSSOServer) GetTokenWithOTP(email, password, otp, tokenName st
 	if err != nil {
 		return nil, err
 	}
-	if response.StatusCode == 404 {
-		return nil, fmt.Errorf("Wrong credentials.")
-	}
+	defer response.Body.Close()
 	if response.StatusCode != 200 && response.StatusCode != 201 {
-		return nil, fmt.Errorf("SSO Error: %s\n", response.Status)
+		return nil, getError(response)
 	}
+	ssodata := SSOData{}
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}
-	ssodata := SSOData{}
 	err = json.Unmarshal(body, &ssodata)
 	if err != nil {
 		return nil, err
 	}
 	ssodata.Realm = "API"
 	return &ssodata, nil
+}
+
+// Error represents an error message returned from Ubuntu SSO.
+type Error struct {
+	Message string                 `json:"message"`
+	Code    string                 `json:"code,omitempty"`
+	Extra   map[string]interface{} `json:"extra,omitempty"`
+}
+
+// getError attempts to extract the most meaningful error that it can
+// from a response.
+func getError(resp *http.Response) *Error {
+	var ssoError Error
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		ssoError.Code = resp.Status
+		ssoError.Message = resp.Status
+		return &ssoError
+	}
+	err = json.Unmarshal(body, &ssoError)
+	if err != nil {
+		// Attempt to pass the original error back in the best way possible
+		ssoError.Code = resp.Status
+		ssoError.Message = string(body)
+		return &ssoError
+	}
+	return &ssoError
+}
+
+// Error implements error.Error.
+func (err *Error) Error() string {
+	if len(err.Extra) == 0 {
+		return err.Message
+	}
+	extra := make([]string, 0, len(err.Extra))
+	for k, v := range err.Extra {
+		extra = append(extra, fmt.Sprintf("%s: %v", k, v))
+	}
+	return fmt.Sprintf("%s (%s)", err.Message, strings.Join(extra, ", "))
 }
 
 // Returns all the Ubuntu SSO information related to this account.
