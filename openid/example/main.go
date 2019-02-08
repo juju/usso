@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -22,9 +23,10 @@ import (
 )
 
 var (
-	optional = flag.String("optional", "", "comma separated list of optional simple registration fields.")
-	required = flag.String("required", "", "comma separated list of required simple registration fields.")
-	teams    = flag.String("teams", "", "comma separated list of teams to request membership of.")
+	caveatID = flag.String("caveatid", "", "`caveat ID` of a third-party caveat addressed to login.ubuntu.com")
+	optional = flag.String("optional", "", "comma separated list of optional simple registration `fields`.")
+	required = flag.String("required", "", "comma separated list of required simple registration `fields`.")
+	teams    = flag.String("teams", "", "comma separated list of `teams` to request membership of.")
 )
 
 var client = openid.NewClient(usso.ProductionUbuntuSSOServer, nil, nil)
@@ -47,6 +49,7 @@ func openID(w http.ResponseWriter, r *http.Request) {
 			Teams:        strings.FieldsFunc(*teams, isComma),
 			SRegRequired: strings.FieldsFunc(*required, isComma),
 			SRegOptional: strings.FieldsFunc(*optional, isComma),
+			CaveatID:     *caveatID,
 		}
 		url := client.RedirectURL(&req)
 		http.Redirect(w, r, url, http.StatusFound)
@@ -59,7 +62,9 @@ func openID(w http.ResponseWriter, r *http.Request) {
 		errorTemplate.Execute(w, err)
 		return
 	}
-	loginTemplate.Execute(w, resp)
+	if err := loginTemplate.Execute(w, resp); err != nil {
+		log.Println(err)
+	}
 }
 
 func isComma(c rune) bool {
@@ -72,14 +77,16 @@ var errorTemplate = template.Must(template.New("failure").Parse(`<html>
 </html>
 `))
 
-var loginTemplate = template.Must(template.New("success").Parse(`<html>
+var loginTemplate = template.Must(template.New("success").Parse(`<!doctype html>
+<html>
 <head><title>Login Success</title></head>
 <body>
 <table>
 <tr><th>Claimed ID</th><td>{{.ID}}</td></tr>{{if .Teams}}
 <tr><th>Teams</th><td>{{.Teams}}</td></tr>
-{{end}}{{range $k, $v := .SimpleRegistration}}
+{{end}}{{range $k, $v := .SReg}}
 <tr><th>{{$k}}</th><td>{{$v}}</td></tr>
+{{end}}{{if .Discharge}}<tr><th>Discharge</th><td>{{printf "%s" .Discharge.MarshalJSON}}</td></tr>
 {{end}}</table>
 </body>
 </html>
