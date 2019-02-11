@@ -13,14 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	. "gopkg.in/check.v1"
+	qt "github.com/frankban/quicktest"
 )
-
-func Test(test *testing.T) { TestingT(test) }
-
-type USSOTestSuite struct{}
-
-var _ = Suite(&USSOTestSuite{})
 
 const (
 	tokenName      = "foo"
@@ -35,15 +29,19 @@ const (
 )
 
 // TestProductionUbuntuSSOServerURLs tests the URLs of the production server.
-func (suite *USSOTestSuite) TestProductionUbuntuSSOServerURLs(c *C) {
+func TestProductionUbuntuSSOServerURLs(t *testing.T) {
+	c := qt.New(t)
+
 	tokenURL := ProductionUbuntuSSOServer.tokenURL()
-	c.Assert(tokenURL, Equals, "https://login.ubuntu.com/api/v2/tokens/oauth")
+	c.Assert(tokenURL, qt.Equals, "https://login.ubuntu.com/api/v2/tokens/oauth")
 }
 
 // TestStagingUbuntuSSOServerURLs tests the URLs of the staging server.
-func (suite *USSOTestSuite) TestStagingUbuntuSSOServerURLs(c *C) {
+func TestStagingUbuntuSSOServerURLs(t *testing.T) {
+	c := qt.New(t)
+
 	tokenURL := StagingUbuntuSSOServer.tokenURL()
-	c.Assert(tokenURL, Equals, "https://login.staging.ubuntu.com/api/v2/tokens/oauth")
+	c.Assert(tokenURL, qt.Equals, "https://login.staging.ubuntu.com/api/v2/tokens/oauth")
 }
 
 type TestServer struct {
@@ -79,7 +77,9 @@ func newTestServer(response, tokenDetails string, code int) *TestServer {
 	return &TestServer{server, &requestContent}
 }
 
-func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
+func TestGetTokenReturnsTokens(t *testing.T) {
+	c := qt.New(t)
+
 	// Simulate a valid Ubuntu SSO Server response.
 	serverResponseData := map[string]string{
 		"date_updated":    "2013-01-16 14:03:36",
@@ -101,11 +101,11 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 
 	// The returned information is correct.
 	ssodata, err := testSSOServer.GetToken(email, password, tokenName)
-	c.Assert(err, IsNil)
+	c.Assert(err, qt.Equals, nil)
 	expectedSSOData := &SSOData{ConsumerKey: consumerKey,
 		ConsumerSecret: consumerSecret, Realm: realm, TokenKey: tokenKey,
 		TokenSecret: tokenSecret, TokenName: tokenName}
-	c.Assert(ssodata, DeepEquals, expectedSSOData)
+	c.Assert(ssodata, qt.DeepEquals, expectedSSOData)
 	// The request that the fake Ubuntu SSO Server has the credentials.
 	credentials := map[string]string{
 		"email":      email,
@@ -116,20 +116,24 @@ func (suite *USSOTestSuite) TestGetTokenReturnsTokens(c *C) {
 	if err != nil {
 		panic(err)
 	}
-	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
+	c.Assert(*server.requestContent, qt.Equals, string(expectedRequestContent))
 }
 
 // GetToken should return empty credentials and an error, if wrong account is provided.
-func (suite *USSOTestSuite) TestGetTokenFails(c *C) {
+func TestGetTokenFails(t *testing.T) {
+	c := qt.New(t)
+
 	server := newTestServer("{}", "{}", 200)
 	var testSSOServer = &UbuntuSSOServer{server.URL, ""}
 	defer server.Close()
 	ssodata, err := testSSOServer.GetToken(email, "WRONG", tokenName)
-	c.Assert(err, NotNil)
-	c.Assert(ssodata, IsNil)
+	c.Assert(err, qt.ErrorMatches, `404 page not found`+"\n"+`\{\}`)
+	c.Assert(ssodata, qt.IsNil)
 }
 
-func (suite *USSOTestSuite) TestGetTokenDetails(c *C) {
+func TestGetTokenDetails(t *testing.T) {
+	c := qt.New(t)
+
 	// Simulate a valid Ubuntu SSO Server response.
 	serverResponseData := map[string]string{
 		"date_updated": "2013-01-16 14:03:36",
@@ -161,12 +165,14 @@ func (suite *USSOTestSuite) TestGetTokenDetails(c *C) {
 	ssodata, err := testSSOServer.GetToken(email, password, tokenName)
 	// The returned information is correct.
 	token_details, err := testSSOServer.GetTokenDetails(ssodata)
-	c.Assert(err, IsNil)
+	c.Assert(err, qt.IsNil)
 	//The request that the fake Ubuntu SSO Server has the token details.
-	c.Assert(token_details, Equals, string(jsonTokenDetails))
+	c.Assert(token_details, qt.Equals, string(jsonTokenDetails))
 }
 
-func (suite *USSOTestSuite) TestGetTokenWithOTP(c *C) {
+func TestGetTokenWithOTP(t *testing.T) {
+	c := qt.New(t)
+
 	// Simulate a valid Ubuntu SSO Server response.
 	serverResponseData := map[string]string{
 		"date_updated":    "2013-01-16 14:03:36",
@@ -188,11 +194,11 @@ func (suite *USSOTestSuite) TestGetTokenWithOTP(c *C) {
 
 	// The returned information is correct.
 	ssodata, err := testSSOServer.GetTokenWithOTP(email, password, otp, tokenName)
-	c.Assert(err, IsNil)
+	c.Assert(err, qt.IsNil)
 	expectedSSOData := &SSOData{ConsumerKey: consumerKey,
 		ConsumerSecret: consumerSecret, Realm: realm, TokenKey: tokenKey,
 		TokenSecret: tokenSecret, TokenName: tokenName}
-	c.Assert(ssodata, DeepEquals, expectedSSOData)
+	c.Assert(ssodata, qt.DeepEquals, expectedSSOData)
 	// The request that the fake Ubuntu SSO Server has the credentials.
 	credentials := map[string]string{
 		"email":      email,
@@ -201,11 +207,13 @@ func (suite *USSOTestSuite) TestGetTokenWithOTP(c *C) {
 		"otp":        otp,
 	}
 	expectedRequestContent, err := json.Marshal(credentials)
-	c.Assert(err, IsNil)
-	c.Assert(*server.requestContent, Equals, string(expectedRequestContent))
+	c.Assert(err, qt.IsNil)
+	c.Assert(*server.requestContent, qt.Equals, string(expectedRequestContent))
 }
 
-func (suite *USSOTestSuite) TestTokenValidity(c *C) {
+func TestTokenValidity(t *testing.T) {
+	c := qt.New(t)
+
 	// Simulate a valid Ubuntu SSO Server response.
 	serverResponseData := map[string]string{
 		"date_updated": "2013-01-16 14:03:36",
@@ -237,22 +245,24 @@ func (suite *USSOTestSuite) TestTokenValidity(c *C) {
 	ssodata, err := testSSOServer.GetToken(email, password, tokenName)
 	// The returned information is correct.
 	token_details, err := testSSOServer.GetTokenDetails(ssodata)
-	c.Assert(err, IsNil)
+	c.Assert(err, qt.IsNil)
 	//The request that the fake Ubuntu SSO Server has the token details.
-	c.Assert(token_details, Equals, string(jsonTokenDetails))
+	c.Assert(token_details, qt.Equals, string(jsonTokenDetails))
 	validity, err := testSSOServer.IsTokenValid(ssodata)
-	c.Assert(validity, Equals, true)
+	c.Assert(validity, qt.Equals, true)
 }
 
 // Check invalid token
-func (suite *USSOTestSuite) TestInvalidToken(c *C) {
+func TestInvalidToken(t *testing.T) {
+	c := qt.New(t)
+
 	server := newTestServer("{}", "{}", 200)
 	var testSSOServer = &UbuntuSSOServer{server.URL, ""}
 	defer server.Close()
 	ssodata := SSOData{"WRONG", "", "", "", "", ""}
 	validity, err := testSSOServer.IsTokenValid(&ssodata)
-	c.Assert(err, NotNil)
-	c.Assert(validity, Equals, false)
+	c.Assert(err, qt.ErrorMatches, `INVALID_CREDENTIALS`)
+	c.Assert(validity, qt.Equals, false)
 }
 
 var getErrorTests = []struct {
@@ -288,7 +298,9 @@ var getErrorTests = []struct {
 	expectError: `500 Internal Server Error`,
 }}
 
-func (suite *USSOTestSuite) TestGetError(c *C) {
+func TestGetError(t *testing.T) {
+	c := qt.New(t)
+
 	for i, test := range getErrorTests {
 		c.Logf("%d. %s", i, test.about)
 		resp := &http.Response{
@@ -296,8 +308,8 @@ func (suite *USSOTestSuite) TestGetError(c *C) {
 			Body:   ioutil.NopCloser(test.body),
 		}
 		err := getError(resp)
-		c.Assert(err.Code, Equals, test.expectCode)
-		c.Assert(err, ErrorMatches, test.expectError)
+		c.Assert(err.Code, qt.Equals, test.expectCode)
+		c.Assert(err, qt.ErrorMatches, test.expectError)
 	}
 }
 
