@@ -11,6 +11,7 @@ import (
 
 	"github.com/yohcop/openid-go"
 	"gopkg.in/errgo.v1"
+	macaroon "gopkg.in/macaroon.v2"
 
 	"github.com/juju/usso"
 )
@@ -36,8 +37,9 @@ const (
 )
 
 const (
-	nsSReg  = "http://openid.net/extensions/sreg/1.1"
-	nsTeams = "http://ns.launchpad.net/2007/openid-teams"
+	nsSReg     = "http://openid.net/extensions/sreg/1.1"
+	nsTeams    = "http://ns.launchpad.net/2007/openid-teams"
+	nsMacaroon = "http://ns.login.ubuntu.com/2016/openid-macaroon"
 )
 
 var (
@@ -134,6 +136,10 @@ type Request struct {
 	// SRegOptional contains a list of simple registration fields
 	// that are optional, but requested by the service.
 	SRegOptional []string
+
+	// CaveatID contains the caveat ID of a third-party macaroon
+	// caveat addressed to the identity server.
+	CaveatID string
 }
 
 // RedirectURL creates an OpenID login request addressed to c.Server.
@@ -160,6 +166,10 @@ func (c *Client) RedirectURL(r *Request) string {
 		v.Set("openid.ns.sreg", nsSReg)
 		v.Set("openid.sreg.optional", strings.Join(r.SRegOptional, ","))
 	}
+	if r.CaveatID != "" {
+		v.Set("openid.ns.macaroon", nsMacaroon)
+		v.Set("openid.macaroon.caveat_id", r.CaveatID)
+	}
 	return c.Server.OpenIDURL() + "?" + v.Encode()
 }
 
@@ -177,6 +187,11 @@ type Response struct {
 	// SReg contains any simple registration fields are
 	// were provided in the OpenID response.
 	SReg map[string]string
+
+	// Discharge contains the discharge macaroon returned
+	// from the identity provider if a CaveatID was supplied in the
+	// request.
+	Discharge *macaroon.Macaroon
 }
 
 // verify is used to perform the OpenID verification of the login
@@ -240,7 +255,23 @@ func (c *Client) Verify(requestURL string) (*Response, error) {
 			r.SReg[k[len("openid.sreg."):]] = v.Get(k)
 		}
 	}
+	if v.Get("openid.ns.macaroon") == nsMacaroon && contains(signed, "macaroon.discharge") {
+		// If the discharge macaroon does not parse still complete the login.
+		r.Discharge, _ = decodeMacaroon(v.Get("openid.macaroon.discharge"))
+	}
 	return &r, nil
+}
+
+func decodeMacaroon(v string) (*macaroon.Macaroon, error) {
+	var m macaroon.Macaroon
+	buf, err := macaroon.Base64Decode([]byte(v))
+	if err != nil {
+		return nil, errgo.Mask(err)
+	}
+	if err := m.UnmarshalBinary(buf); err != nil {
+		return nil, errgo.Mask(err)
+	}
+	return &m, nil
 }
 
 // contains finds whether ss contains s.

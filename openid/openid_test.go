@@ -11,6 +11,7 @@ import (
 	qt "github.com/frankban/quicktest"
 	yopenid "github.com/yohcop/openid-go"
 	"gopkg.in/errgo.v1"
+	macaroon "gopkg.in/macaroon.v2"
 
 	"github.com/juju/usso"
 	"github.com/juju/usso/openid"
@@ -25,21 +26,21 @@ var redirectURLTests = []struct {
 	request *openid.Request
 	expect  string
 }{{
-	about:  "production with only return_to",
+	about:  "production-with-only-return_to",
 	server: usso.ProductionUbuntuSSOServer,
 	request: &openid.Request{
 		ReturnTo: "http://return.to",
 	},
 	expect: "https://login.ubuntu.com/+openid?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.return_to=http://return.to",
 }, {
-	about:  "staging with only return_to",
+	about:  "staging-with-only-return_to",
 	server: usso.StagingUbuntuSSOServer,
 	request: &openid.Request{
 		ReturnTo: "http://return.to",
 	},
 	expect: "https://login.staging.ubuntu.com/+openid?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.return_to=http://return.to",
 }, {
-	about:  "with realm",
+	about:  "with-realm",
 	server: usso.ProductionUbuntuSSOServer,
 	request: &openid.Request{
 		ReturnTo: "http://return.to/abcdef",
@@ -47,7 +48,7 @@ var redirectURLTests = []struct {
 	},
 	expect: "https://login.ubuntu.com/+openid?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.return_to=http://return.to/abcdef&openid.realm=http://return.to",
 }, {
-	about:  "with teams",
+	about:  "with-teams",
 	server: usso.ProductionUbuntuSSOServer,
 	request: &openid.Request{
 		ReturnTo: "http://return.to",
@@ -63,7 +64,7 @@ var redirectURLTests = []struct {
 	},
 	expect: "https://login.ubuntu.com/+openid?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.return_to=http://return.to&openid.ns.sreg=http://openid.net/extensions/sreg/1.1&openid.sreg.required=email,x_province",
 }, {
-	about:  "with sreg.optional",
+	about:  "with-sreg.optional",
 	server: usso.ProductionUbuntuSSOServer,
 	request: &openid.Request{
 		ReturnTo:     "http://return.to",
@@ -71,7 +72,7 @@ var redirectURLTests = []struct {
 	},
 	expect: "https://login.ubuntu.com/+openid?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.return_to=http://return.to&openid.ns.sreg=http://openid.net/extensions/sreg/1.1&openid.sreg.optional=nickname,x_city",
 }, {
-	about:  "with sreg",
+	about:  "with-sreg",
 	server: usso.ProductionUbuntuSSOServer,
 	request: &openid.Request{
 		ReturnTo:     "http://return.to",
@@ -79,6 +80,14 @@ var redirectURLTests = []struct {
 		SRegOptional: []string{openid.SRegNickname, openid.SRegCity},
 	},
 	expect: "https://login.ubuntu.com/+openid?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.return_to=http://return.to&openid.ns.sreg=http://openid.net/extensions/sreg/1.1&openid.sreg.required=email,x_province&openid.sreg.optional=nickname,x_city",
+}, {
+	about:  "with-caveat",
+	server: usso.ProductionUbuntuSSOServer,
+	request: &openid.Request{
+		ReturnTo: "http://return.to",
+		CaveatID: `{"secret": "squirrel", "version": 1}`,
+	},
+	expect: `https://login.ubuntu.com/+openid?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=checkid_setup&openid.claimed_id=http://specs.openid.net/auth/2.0/identifier_select&openid.identity=http://specs.openid.net/auth/2.0/identifier_select&openid.return_to=http://return.to&openid.ns.macaroon=http://ns.login.ubuntu.com/2016/openid-macaroon&openid.macaroon.caveat_id={"secret": "squirrel", "version": 1}`,
 }}
 
 func TestRedirectURL(t *testing.T) {
@@ -129,7 +138,7 @@ var verifyTests = []struct {
 		Teams: []string{"team1", "team2"},
 	},
 }, {
-	about:   "simple registration",
+	about:   "simple-registration",
 	url:     "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity,sreg.email,sreg.fullname&openid.sig=AAAA&openid.ns.sreg=http://openid.net/extensions/sreg/1.1&openid.sreg.email=a@example.org&openid.sreg.fullname=A",
 	server:  usso.ProductionUbuntuSSOServer,
 	verifyF: verifySuccess,
@@ -141,7 +150,7 @@ var verifyTests = []struct {
 		},
 	},
 }, {
-	about:   "teams not signed",
+	about:   "teams-not-signed",
 	url:     "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity&openid.sig=AAAA&openid.ns.lp=http://ns.launchpad.net/2007/openid-teams&openid.lp.is_member=team1,team2",
 	server:  usso.ProductionUbuntuSSOServer,
 	verifyF: verifySuccess,
@@ -149,7 +158,7 @@ var verifyTests = []struct {
 		ID: "https://login.ubuntu.com/+id/AAAAAA",
 	},
 }, {
-	about:   "simple registration not signed",
+	about:   "simple-registration-not-signed",
 	url:     "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity&openid.sig=AAAA&openid.ns.sreg=http://openid.net/extensions/sreg/1.1&openid.sreg.email=a@example.org&openid.sreg.fullname=A",
 	server:  usso.ProductionUbuntuSSOServer,
 	verifyF: verifySuccess,
@@ -157,19 +166,19 @@ var verifyTests = []struct {
 		ID: "https://login.ubuntu.com/+id/AAAAAA",
 	},
 }, {
-	about:       "bad url",
+	about:       "bad-url",
 	url:         "://return.to",
 	server:      usso.ProductionUbuntuSSOServer,
 	verifyF:     verifySuccess,
 	expectError: "parse ://return.to: missing protocol scheme",
 }, {
-	about:       "unexpected OP",
+	about:       "unexpected-OP",
 	url:         "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity&openid.sig=AAAA",
 	server:      usso.StagingUbuntuSSOServer,
 	verifyF:     verifySuccess,
 	expectError: `OpenID response from unexpected endpoint "https://login.ubuntu.com/\+openid"`,
 }, {
-	about:  "verification failure",
+	about:  "verification-failure",
 	url:    "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity&openid.sig=AAAA",
 	server: usso.ProductionUbuntuSSOServer,
 	verifyF: func(*qt.C, string, yopenid.DiscoveryCache, yopenid.NonceStore) (string, error) {
@@ -177,7 +186,7 @@ var verifyTests = []struct {
 	},
 	expectError: `TEST!`,
 }, {
-	about:      "uses specified NonceStore",
+	about:      "uses-specified-NonceStore",
 	url:        "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity&openid.sig=AAAA",
 	server:     usso.ProductionUbuntuSSOServer,
 	nonceStore: testNonceStore,
@@ -189,7 +198,7 @@ var verifyTests = []struct {
 		ID: "PASS",
 	},
 }, {
-	about:  "creates server specific DiscoveryCache",
+	about:  "creates-server-specific-DiscoveryCache",
 	url:    "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity&openid.sig=AAAA",
 	server: usso.ProductionUbuntuSSOServer,
 	verifyF: func(c *qt.C, _ string, dc yopenid.DiscoveryCache, _ yopenid.NonceStore) (string, error) {
@@ -207,7 +216,7 @@ var verifyTests = []struct {
 		ID: "PASS",
 	},
 }, {
-	about: "cancel response",
+	about: "cancel-response",
 	url:   "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=cancel",
 	verifyF: func(c *qt.C, _ string, _ yopenid.DiscoveryCache, _ yopenid.NonceStore) (string, error) {
 		c.Fatalf("verify should not have been called")
@@ -216,7 +225,7 @@ var verifyTests = []struct {
 	expectError:      "login cancelled",
 	expectErrorCause: openid.ErrCancel,
 }, {
-	about: "bad mode",
+	about: "bad-mode",
 	url:   "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=bad",
 	verifyF: func(c *qt.C, _ string, _ yopenid.DiscoveryCache, _ yopenid.NonceStore) (string, error) {
 		c.Fatalf("verify should not have been called")
@@ -224,7 +233,7 @@ var verifyTests = []struct {
 	},
 	expectError: `unrecognised mode "bad"`,
 }, {
-	about: "openid error",
+	about: "openid-error",
 	url:   "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=error&openid.error=test+message&openid.contact=test+contact&openid.reference=test+reference",
 	verifyF: func(c *qt.C, _ string, _ yopenid.DiscoveryCache, _ yopenid.NonceStore) (string, error) {
 		c.Fatalf("verify should not have been called")
@@ -236,7 +245,40 @@ var verifyTests = []struct {
 		Contact:   "test contact",
 		Reference: "test reference",
 	},
+}, {
+	about:   "discharge",
+	url:     "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity,macaroon.discharge&openid.sig=AAAA&openid.ns.macaroon=http://ns.login.ubuntu.com/2016/openid-macaroon&openid.macaroon.discharge=MDAwZWxvY2F0aW9uIAowMDE0aWRlbnRpZmllciBUZXN0CjAwMmZzaWduYXR1cmUgHF1XmyS2hpzHuObgmCBWFzpF7U0hFRuLnDsfkGLG9kAK",
+	server:  usso.ProductionUbuntuSSOServer,
+	verifyF: verifySuccess,
+	expectResponse: &openid.Response{
+		ID:        "https://login.ubuntu.com/+id/AAAAAA",
+		Discharge: testMacaroon,
+	},
+}, {
+	about:   "discharge-bad-base64",
+	url:     "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity,macaroon.discharge&openid.sig=AAAA&openid.ns.macaroon=http://ns.login.ubuntu.com/2016/openid-macaroon&openid.macaroon.discharge=MDAwZWxvY2F0aW9uIAowMDE0aWRlbnRpZmllciBUZXN0CjAwMmZzaWduYXR1cmUgHF1XmyS2hpzHuObgmCBWFzpF7U0hFRuLnDsfkGLG9kA:",
+	server:  usso.ProductionUbuntuSSOServer,
+	verifyF: verifySuccess,
+	expectResponse: &openid.Response{
+		ID: "https://login.ubuntu.com/+id/AAAAAA",
+	},
+}, {
+	about:   "discharge-invalid-macaroon",
+	url:     "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity,macaroon.discharge&openid.sig=AAAA&openid.ns.macaroon=http://ns.login.ubuntu.com/2016/openid-macaroon&openid.macaroon.discharge=NDAwZWxvY2F0aW9uIAowMDE0aWRlbnRpZmllciBUZXN0CjAwMmZzaWduYXR1cmUgHF1XmyS2hpzHuObgmCBWFzpF7U0hFRuLnDsfkGLG9kAK",
+	server:  usso.ProductionUbuntuSSOServer,
+	verifyF: verifySuccess,
+	expectResponse: &openid.Response{
+		ID: "https://login.ubuntu.com/+id/AAAAAA",
+	},
 }}
+
+var testMacaroon = func() *macaroon.Macaroon {
+	m, err := macaroon.New([]byte("A"), []byte("Test"), "", macaroon.V1)
+	if err != nil {
+		panic(err)
+	}
+	return m
+}()
 
 func TestVerify(t *testing.T) {
 	c := qt.New(t)
