@@ -170,7 +170,7 @@ var verifyTests = []struct {
 	url:         "://return.to",
 	server:      usso.ProductionUbuntuSSOServer,
 	verifyF:     verifySuccess,
-	expectError: "parse ://return.to: missing protocol scheme",
+	expectError: `parse "://return.to": missing protocol scheme`,
 }, {
 	about:       "unexpected-OP",
 	url:         "http://return.to?openid.ns=http://specs.openid.net/auth/2.0&openid.mode=id_res&openid.op_endpoint=https://login.ubuntu.com/%2Bopenid&openid.claimed_id=https://login.ubuntu.com/%2Bid/AAAAAA&openid.identity=https://login.ubuntu.com/%2Bid/AAAAAA&openid.return_to=http://return.to&openid.response_nonce=2005-05-15T17:11:51ZUNIQUE&openid.assoc_handle=1&openid.signed=op_endpoint,return_to,response_nonce,assoc_handle,claimed_id,identity&openid.sig=AAAA",
